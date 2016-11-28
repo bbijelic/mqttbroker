@@ -43,13 +43,10 @@ int main(int argc, char** argv) {
 	}
 
 	// Initialize MQTT broker
-	MqttBroker *mqtt_broker = new MqttBroker(workers, port, bind_ip);
+	MqttBroker mqtt_broker(workers, port, bind_ip);
 
 	// Blocks while waiting for connections
-	mqtt_broker->start();
-
-	// Delete MQTT broker
-	delete mqtt_broker;
+	mqtt_broker.start();
 
 	return 0;
 }
