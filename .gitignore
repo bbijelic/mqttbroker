@@ -1,5 +1,18 @@
+# Eclipse
 /Debug
 /Release
 /.cproject
 /.settings
 /.project
+
+# CMake
+/CMakeFiles
+Makefile
+cmake_install.cmake
+CMakeCache.txt
+broker.log
+
+# Project
+/logs
+mqttbroker
+
