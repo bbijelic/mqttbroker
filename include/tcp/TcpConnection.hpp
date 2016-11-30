@@ -38,11 +38,6 @@ private:
 	 */
 	int m_peer_port;
 
-	/**
-	 * Wait for the read event
-	 */
-	bool waitForReadEvent(int timeout);
-
 
 public:
 
@@ -77,6 +72,11 @@ public:
 	int getPeerPort();
 
 	/**
+	 * Returns socket file descriptor
+	 */
+	int getSocket();
+
+	/**
 	 * Sends via socket
 	 */
 	ssize_t send(const char* buffer, size_t length);
@@ -84,7 +84,7 @@ public:
 	/**
 	 * Receive from the socket
 	 */
-	ssize_t receive(char* buffer, size_t length, int timeout=0);
+	ssize_t receive(char* buffer, size_t length);
 };
 
 }
