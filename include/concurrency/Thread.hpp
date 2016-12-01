@@ -16,12 +16,14 @@ namespace Concurrency {
  * Thread class
  */
 class Thread {
-private:
+protected:
 
 	/**
 	 * Thread id
 	 */
 	pthread_t m_tid;
+
+private:
 
 	/**
 	 * Is running

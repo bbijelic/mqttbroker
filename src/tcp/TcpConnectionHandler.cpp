@@ -5,66 +5,94 @@
  *      Author: dev
  */
 
+#include <unistd.h>
+#include <fcntl.h>
+#include <iostream>
+#include <sys/epoll.h>
+
 #include "easylogging++.hpp"
-
 #include "TcpConnectionHandler.hpp"
-#include "MqttControlPacketType.hpp"
 
-using namespace MQTT;
+using namespace std;
 using namespace TCP;
 
 /**
  * Constructor
  */
 TcpConnectionHandler::TcpConnectionHandler(
-		TcpConnectionQueue<TcpConnectionQueueItem*>& queue) :
-		m_queue(queue) {
+		TcpConnectionQueue<TcpConnection*>& queue, int epoll_fd) :
+		m_queue(queue), m_epoll_fd(epoll_fd) {
 }
-
 
 void* TcpConnectionHandler::run() {
 
-	LOG(INFO)<< "Running TCP connection handler";
+	LOG(INFO)<< "Connection handler thread " << m_tid << " initializing";
 
 	// Remove 1 item at a time and process it.
 	// Blocks if no items are available to process
 	while (true) {
 
-		// Obtain TCP connection queue item from the queue
-		TcpConnectionQueueItem* queue_item = m_queue.remove();
-
-		// Obtain TCP connection from the queue item
-		TcpConnection* connection = queue_item->getConnection();
+		// Obtain TCP connection from the queue
+		TcpConnection* connection = m_queue.remove();
 
 		// TODO handle connection
 		string peer_ip = connection->getPeerIp();
 
-		LOG(INFO) << "Handling connection from host '" << peer_ip << "'";
+		LOG(INFO) << "Connection handler thread " << m_tid << " handling connection from host " << peer_ip;
 
-		// Fixed header bytes
-		char fixedHeader[1];
+		// Obtain connection socket
+		int connection_socket = connection->getSocket();
 
-		// Get first two bytes
-		int fixedHeadeRcvSize = connection->receive(fixedHeader, sizeof(fixedHeader));
+		// Make socket non blocking
+		makeSocketNonBlocking(connection_socket);
 
-		if(fixedHeadeRcvSize != sizeof(fixedHeader)) {
-			LOG(ERROR) << "Cant read MQTT fixed header";
-		}
+		// Add socket to the epoll
+		registerSocketToEpoll(connection);
 
-		int mqttControlType = fixedHeader[0] >> 4;
-		if(mqttControlType < 1 || mqttControlType > 14) {
-			LOG(ERROR) << "Unknown MQTT control type";
-		}
-
-		if(mqttControlType == MqttControlPacketType::CONNECT) {
-			LOG(INFO) << "MQTT Control Type: CONNECT";
-		}
-
-		// Deletes queue item which also kills the connection
-		delete queue_item;
-
+		LOG(INFO) << "Connection handler thread " << m_tid << " successfully added connection from " << connection->getPeerIp() << " to the epoll event handler";
 	};
 
 	return NULL;
 
+}
+
+bool TcpConnectionHandler::registerSocketToEpoll(TcpConnection *connection) {
+
+	struct epoll_event event;
+	event.data.fd = connection->getSocket();
+	event.data.ptr = connection;
+	event.events = EPOLLIN | EPOLLET | EPOLLONESHOT;
+
+	int result = epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, connection->getSocket(),
+			&event);
+
+	if (result == -1) {
+		LOG(ERROR)<< "epoll_ctl() failed";
+
+		// Close connection
+		close(connection->getSocket());
+
+		return false;
+	}
+
+	return true;
+}
+
+bool TcpConnectionHandler::makeSocketNonBlocking(int socketd) {
+	int flags, s;
+
+	flags = fcntl(socketd, F_GETFL, 0);
+	if (flags == -1) {
+		LOG(ERROR)<< "fcntl() failed";
+		return false;
+	}
+
+	flags |= O_NONBLOCK;
+	s = fcntl(socketd, F_SETFL, flags);
+	if (s == -1) {
+		LOG(ERROR)<< "fcntl() failed";
+		return false;
+	}
+
+	return true;
 }

@@ -13,7 +13,7 @@
 
 using namespace std;
 
-namespace Concurrency {
+namespace TCP {
 
 /**
  * Template TCP connection queue class
