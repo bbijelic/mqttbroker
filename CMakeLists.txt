@@ -6,8 +6,6 @@ set(CMAKE_CXX_STANDARD 11)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DELPP_THREAD_SAFE -DELPP_STACKTRACE_ON_CRASH -DELPP_NO_DEFAULT_LOG_FILE")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DELPP_THREAD_SAFE -DELPP_STACKTRACE_ON_CRASH -DELPP_NO_DEFAULT_LOG_FILE")
-
 include_directories("include/concurrency")
 include_directories("include/logging")
 include_directories("include/mqtt")
