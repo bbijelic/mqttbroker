@@ -86,6 +86,8 @@ TcpConnection* TcpListener::acceptConnections() {
 
 	int con_sd = ::accept(m_sd, (struct sockaddr*)&address, &len);
 
+	cout << "Accepted connection on socket " << con_sd << endl;
+
 	if (con_sd < 0) {
 		cout << "accept() failed: " << errno << endl;
 		return NULL;

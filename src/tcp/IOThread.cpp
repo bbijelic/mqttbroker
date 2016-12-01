@@ -12,7 +12,7 @@
 #include <iostream>
 #include <stdlib.h>
 
-#define MAXEVENTS 1
+#define MAXEVENTS 5
 
 using namespace std;
 using namespace TCP;
@@ -35,8 +35,8 @@ void* IOThread::run() {
 			// Get tcp connection from event data pointer
 			TcpConnection* connection = (TcpConnection*) events[i].data.ptr;
 
-			cout << "IO thread" << m_tid << " handles connection from socket "
-					<< events[i].data.fd << endl;
+			cout << "IO thread " << m_tid << " handles connection from socket "
+					<< connection->getSocket() << endl;
 
 			if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP)
 					|| (events[i].events & EPOLLRDHUP)
@@ -46,11 +46,11 @@ void* IOThread::run() {
 				 ready for reading (why were we notified then?) */
 				cout << "IO thread " << m_tid
 						<< " handling error on epoll, closing socket "
-						<< events[i].data.fd << endl;
+						<< connection->getSocket() << endl;
 
 				/* Closing the descriptor will make epoll remove it
 				 from the set of descriptors which are monitored. */
-				close(events[i].data.fd);
+				close(connection->getSocket());
 
 				continue;
 
@@ -63,19 +63,49 @@ void* IOThread::run() {
 				 data. */
 
 				cout << "IO thread " << m_tid << " handling data from "
-						<< connection->getPeerIp() << " on socket " << events[i].data.fd << endl;
+						<< connection->getPeerIp() << " on socket "
+						<< connection->getSocket() << endl;
 
 				char buffer[500];
 				int received = connection->receive(buffer, sizeof buffer);
 
-				cout << "IO thread " << m_tid << " received " << received
-						<< " bytes from socket " << events[i].data.fd << endl;
+				if (received > 0) {
+					// Got the data from the socket
 
-				// Reset what we are watching for
-				events[i].events = EPOLLIN | EPOLLET | EPOLLONESHOT;
-				// tell epoll to re-enable this fd.
-				epoll_ctl(m_epoll_fd, EPOLL_CTL_MOD, events[i].data.fd,
-						&events[i]);
+					cout << "IO thread " << m_tid << " received " << received
+							<< " bytes from socket " << connection->getSocket()
+							<< endl;
+
+
+					// Reset what we are watching for
+					events[i].events = EPOLLIN | EPOLLET | EPOLLONESHOT;
+					// tell epoll to re-enable this fd.
+					int result = epoll_ctl(m_epoll_fd, EPOLL_CTL_MOD,
+							connection->getSocket(), &events[i]);
+
+					if (result == -1) {
+						cout << "epoll_ctl() failed: " << errno << endl;
+
+						// Close connection
+						close(connection->getSocket());
+
+					}
+
+				} else if (received == 0) {
+					// Client closed connection
+
+					cout << "IO thread " << m_tid
+							<< " handling closed connection from client "
+							<< connection->getPeerIp() << " on socket "
+							<< connection->getSocket() << endl;
+
+					// Close connection
+					close(connection->getSocket());
+
+					// Continue event loop
+					continue;
+				}
+
 			}
 
 		}
