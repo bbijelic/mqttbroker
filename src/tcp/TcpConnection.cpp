@@ -12,6 +12,7 @@
 #include <sys/time.h>
 #include <iostream>
 
+#include "easylogging++.hpp"
 #include "TcpConnection.hpp"
 
 using namespace TCP;
@@ -51,7 +52,6 @@ int TcpConnection::getSocket() {
 }
 
 void TcpConnection::closeConnection() {
-	cout << "Closing connection from " << m_peer_ip << " on socket " << m_sd
-			<< endl;
+	LOG(INFO)<< "Closing connection from " << m_peer_ip << " on socket " << m_sd;
 	close(m_sd);
 }

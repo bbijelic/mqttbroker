@@ -2,9 +2,12 @@
 #include "TcpConnectionQueue.hpp"
 #include "TcpConnectionHandler.hpp"
 #include "IOThread.hpp"
+#include "easylogging++.hpp"
 
 #include <sys/epoll.h>
-#include <iostream>
+#include <csignal>
+
+INITIALIZE_EASYLOGGINGPP
 
 using namespace std;
 using namespace TCP;
@@ -12,19 +15,50 @@ using namespace TCP;
 static int initialize_epoll() {
 	int epoll_fd = epoll_create1(0);
 	if (epoll_fd == -1) {
-		cout << "epoll_create() failed: " << errno << endl;
+		LOG(ERROR)<< "epoll_create() failed: " << errno;
 		abort();
 	}
 
-	cout << "epoll initialized" << endl;
+	LOG(INFO)<< "epoll initialized";
 
 	return epoll_fd;
+}
+
+void shutdownHandler(int signum) {
+	LOG(INFO)<< "Interrupt signal (" << signum << ") received.";
+	LOG(INFO) << "Handling server shutdown...";
+	exit(signum);
+}
+
+static void registerShutdownHandler() {
+	LOG(INFO)<< "Registering shutdown handler";
+
+	// Register signal SIGINT and signal handler
+	// Abnormal termination of the program, such as a call to abort
+	signal(SIGABRT, shutdownHandler);
+	// An erroneous arithmetic operation, such as a divide by zero or an operation resulting in overflow.
+	signal(SIGFPE, shutdownHandler);
+	// Detection of an illegal instruction
+	signal(SIGILL, shutdownHandler);
+	// Receipt of an interactive attention signal.
+	signal(SIGINT, shutdownHandler);
+	// An invalid access to storage.
+	signal(SIGSEGV, shutdownHandler);
+	// A termination request sent to the program.
+	signal(SIGTERM, shutdownHandler);
 }
 
 /**
  * Main
  */
 int main(int argc, char *argv[]) {
+
+	// Load configuration from file
+	el::Configurations conf("config/logger.conf");
+	el::Loggers::reconfigureAllLoggers(conf);
+
+	// Registering shutdown handler
+	registerShutdownHandler();
 
 	// initialize epoll
 	int epoll_fd = initialize_epoll();

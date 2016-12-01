@@ -15,6 +15,7 @@
 #include <iostream>
 #include <string.h>
 
+#include "easylogging++.hpp"
 #include "TcpListener.hpp"
 
 using namespace std;
@@ -41,37 +42,35 @@ void TcpListener::startListening(){
 	int result = bind(m_sd, (struct sockaddr*) &address, sizeof(address));
 
 	if (result != 0) {
-		cout << "bind() failed: " << errno << endl;
+		LOG(ERROR) << "bind() failed: " << errno;
 		return;
 	}
 
 	result = listen(m_sd, 5);
 	if(result !=0){
-		cout << "listen() failed" << endl;
+		LOG(ERROR) << "listen() failed";
 		return;
 	}
 
-	cout << "Listening on port " << m_port << endl;
+	LOG(INFO) << "Listening on port " << m_port;
 
 	// Loop indefinitely and accept connections
 	while(true){
 
-		cout << "Waiting for incomming connections" << endl;
+		LOG(INFO) << "Waiting for incomming connections";
 
 		// Blocks until connection is returned
 		TcpConnection* connection = acceptConnections();
 
 		if(!connection){
-			cout << "Could not accept connection" << endl;
+			LOG(ERROR) << "Could not accept connection";
 			continue;
 		}
-
-		cout << "Accepted connection from: " << connection->getPeerIp() << endl;
 
 		// Adding connection to the queue
 		m_queue.add(connection);
 
-		cout << "Connection from " << connection->getPeerIp() << " added to the I/0 Queue" << endl;
+		LOG(INFO) << "Connection from " << connection->getPeerIp() << " added to the I0 Queue";
 	}
 
 }
@@ -86,10 +85,10 @@ TcpConnection* TcpListener::acceptConnections() {
 
 	int con_sd = ::accept(m_sd, (struct sockaddr*)&address, &len);
 
-	cout << "Accepted connection on socket " << con_sd << endl;
+	LOG(INFO) << "TCP listener accepted connection on socket " << con_sd;
 
 	if (con_sd < 0) {
-		cout << "accept() failed: " << errno << endl;
+		LOG(ERROR) << "accept() failed: " << errno;
 		return NULL;
 	}
 
@@ -101,7 +100,7 @@ TcpConnection* TcpListener::acceptConnections() {
 
 TcpListener::~TcpListener(){
 	if(m_sd > 0) {
-		cout << "Closing socket " << m_sd << endl;
+		LOG(INFO) << "Closing socket " << m_sd;
 		close(m_sd);
 	}
 }

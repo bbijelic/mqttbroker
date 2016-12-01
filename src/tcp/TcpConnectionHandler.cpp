@@ -10,6 +10,7 @@
 #include <iostream>
 #include <sys/epoll.h>
 
+#include "easylogging++.hpp"
 #include "TcpConnectionHandler.hpp"
 
 using namespace std;
@@ -25,7 +26,7 @@ TcpConnectionHandler::TcpConnectionHandler(
 
 void* TcpConnectionHandler::run() {
 
-	cout << "Running TCP connection handler" << endl;
+	LOG(INFO)<< "Connection handler thread " << m_tid << " initializing";
 
 	// Remove 1 item at a time and process it.
 	// Blocks if no items are available to process
@@ -37,7 +38,7 @@ void* TcpConnectionHandler::run() {
 		// TODO handle connection
 		string peer_ip = connection->getPeerIp();
 
-		cout << "Handling connection from host '" << peer_ip << "'" << endl;
+		LOG(INFO) << "Connection handler thread " << m_tid << " handling connection from host " << peer_ip;
 
 		// Obtain connection socket
 		int connection_socket = connection->getSocket();
@@ -48,8 +49,7 @@ void* TcpConnectionHandler::run() {
 		// Add socket to the epoll
 		registerSocketToEpoll(connection);
 
-		cout << "Connection from " << connection->getPeerIp()
-				<< " successfully added to the epoll" << endl;
+		LOG(INFO) << "Connection handler thread " << m_tid << " successfully added connection from " << connection->getPeerIp() << " to the epoll event handler";
 	};
 
 	return NULL;
@@ -67,10 +67,10 @@ bool TcpConnectionHandler::registerSocketToEpoll(TcpConnection *connection) {
 			&event);
 
 	if (result == -1) {
-		cout << "epoll_ctl() failed: " << errno << endl;
+		LOG(ERROR)<< "epoll_ctl() failed";
 
 		// Close connection
-		close (connection->getSocket());
+		close(connection->getSocket());
 
 		return false;
 	}
@@ -83,14 +83,14 @@ bool TcpConnectionHandler::makeSocketNonBlocking(int socketd) {
 
 	flags = fcntl(socketd, F_GETFL, 0);
 	if (flags == -1) {
-		perror("fcntl");
+		LOG(ERROR)<< "fcntl() failed";
 		return false;
 	}
 
 	flags |= O_NONBLOCK;
 	s = fcntl(socketd, F_SETFL, flags);
 	if (s == -1) {
-		perror("fcntl");
+		LOG(ERROR)<< "fcntl() failed";
 		return false;
 	}
 

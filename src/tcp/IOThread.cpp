@@ -8,12 +8,12 @@
 #include "IOThread.hpp"
 #include "TcpConnection.hpp"
 #include "MqttControlPacketType.hpp"
+#include "easylogging++.hpp"
 
 #include <sys/epoll.h>
-#include <iostream>
 #include <stdlib.h>
 
-#define MAXEVENTS 5
+#define MAXEVENTS 64
 
 using namespace std;
 using namespace TCP;
@@ -28,10 +28,10 @@ int IOThread::getMessageControlType(TcpConnection* connection) {
 	if (received == 0) {
 		// Client closed connection
 
-		cout << "IO thread " << m_tid
+		LOG(INFO) << "IO thread " << m_tid
 				<< " handling closed connection from client "
 				<< connection->getPeerIp() << " on socket "
-				<< connection->getSocket() << endl;
+				<< connection->getSocket();
 
 		// Close connection
 		connection->closeConnection();
@@ -57,10 +57,10 @@ int IOThread::getMessageLength(TcpConnection* connection) {
 		if (received == 0) {
 			// Client closed connection
 
-			cout << "IO thread " << m_tid
+			LOG(INFO) << "IO thread " << m_tid
 					<< " handling closed connection from client "
 					<< connection->getPeerIp() << " on socket "
-					<< connection->getSocket() << endl;
+					<< connection->getSocket();
 
 			// Close connection
 			connection->closeConnection();
@@ -92,16 +92,16 @@ void* IOThread::run() {
 		// Get epoll events
 		int num_events = epoll_wait(m_epoll_fd, events, MAXEVENTS, -1);
 
-		cout << "IO thread " << m_tid << " got " << num_events << " events"
-				<< endl;
+		LOG(INFO) << "IO thread " << m_tid << " handling " << num_events << " events";
+
 
 		for (int i = 0; i < num_events; i++) {
 
 			// Get tcp connection from event data pointer
 			TcpConnection* connection = (TcpConnection*) events[i].data.ptr;
 
-			cout << "IO thread " << m_tid << " handles connection from socket "
-					<< connection->getSocket() << endl;
+			LOG(INFO) << "IO thread " << m_tid << " handles connection from socket "
+					<< connection->getSocket();
 
 			if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP)
 					|| (events[i].events & EPOLLRDHUP)
@@ -109,9 +109,9 @@ void* IOThread::run() {
 
 				/* An error has occured on this fd, or the socket is not
 				 ready for reading (why were we notified then?) */
-				cout << "IO thread " << m_tid
+				LOG(ERROR) << "IO thread " << m_tid
 						<< " handling error on epoll, closing socket "
-						<< connection->getSocket() << endl;
+						<< connection->getSocket();
 
 				/* Closing the descriptor will make epoll remove it
 				 from the set of descriptors which are monitored. */
@@ -127,9 +127,9 @@ void* IOThread::run() {
 				 and won't get a notification again for the same
 				 data. */
 
-				cout << "IO thread " << m_tid << " handling data from "
+				LOG(INFO) << "IO thread " << m_tid << " handling data from "
 						<< connection->getPeerIp() << " on socket "
-						<< connection->getSocket() << endl;
+						<< connection->getSocket();
 
 				// Get message type
 				int msg_type = getMessageControlType(connection);
@@ -138,10 +138,10 @@ void* IOThread::run() {
 				int message_length = getMessageLength(connection);
 				if (message_length == -1) {
 
-					cout << "IO Thread " << m_tid
+					LOG(ERROR) << "IO Thread " << m_tid
 							<< " could not get message length from client "
 							<< connection->getPeerIp() << " on socket "
-							<< connection->getSocket() << endl;
+							<< connection->getSocket();
 
 					// Close connection
 					connection->closeConnection();
@@ -150,10 +150,10 @@ void* IOThread::run() {
 
 				} else {
 
-					cout << "IO Thread " << m_tid << " obtaining total of "
+					LOG(INFO) << "IO Thread " << m_tid << " obtaining total of "
 							<< message_length << " message bytes from "
 							<< connection->getPeerIp() << " on socket "
-							<< connection->getSocket() << endl;
+							<< connection->getSocket();
 
 					char msgbuff[message_length];
 
@@ -166,10 +166,10 @@ void* IOThread::run() {
 						int rcvd = connection->receive(msgbuff, message_length);
 
 						if (rcvd == 0) {
-							cout << "IO thread " << m_tid
+							LOG(INFO) << "IO thread " << m_tid
 									<< " handling closed connection from client "
 									<< connection->getPeerIp() << " on socket "
-									<< connection->getSocket() << endl;
+									<< connection->getSocket();
 
 							// Close connection
 							connection->closeConnection();
@@ -190,10 +190,10 @@ void* IOThread::run() {
 					if (msg_type == MqttControlPacketType::CONNECT) {
 						// Handling CONNECT message
 
-						cout << "IO Thread " << m_tid
+						LOG(INFO) << "IO Thread " << m_tid
 								<< " handling CONNECT message from client "
 								<< connection->getPeerIp() << " on socket "
-								<< connection->getSocket() << endl;
+								<< connection->getSocket();
 
 						// TODO Handle message
 					}
@@ -207,11 +207,12 @@ void* IOThread::run() {
 						connection->getSocket(), &events[i]);
 
 				if (result == -1) {
-					cout << "epoll_ctl() failed: " << errno << endl;
+					LOG(ERROR) << "epoll_ctl() failed";
 
 					// Close connection
 					connection->closeConnection();
 
+					continue;
 				}
 
 			}
