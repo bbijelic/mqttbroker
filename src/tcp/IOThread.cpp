@@ -7,6 +7,7 @@
 
 #include "IOThread.hpp"
 #include "TcpConnection.hpp"
+#include "MqttControlPacketType.hpp"
 
 #include <sys/epoll.h>
 #include <iostream>
@@ -16,6 +17,70 @@
 
 using namespace std;
 using namespace TCP;
+using namespace MQTT;
+
+int IOThread::getMessageControlType(TcpConnection* connection) {
+
+	// Read only one byte, which is message control byte
+	char msgtype[1];
+	int received = connection->receive(msgtype, 1);
+
+	if (received == 0) {
+		// Client closed connection
+
+		cout << "IO thread " << m_tid
+				<< " handling closed connection from client "
+				<< connection->getPeerIp() << " on socket "
+				<< connection->getSocket() << endl;
+
+		// Close connection
+		connection->closeConnection();
+
+		// Continue event loop
+		return -1;
+	}
+
+	// Shift bytes to get message type
+	return msgtype[0] >> 4;
+}
+
+int IOThread::getMessageLength(TcpConnection* connection) {
+
+	int multiplier = 1;
+	int length = 0;
+
+	char buffer[1];
+	do {
+		// Get next byte of the stream
+		int received = connection->receive(buffer, sizeof buffer);
+
+		if (received == 0) {
+			// Client closed connection
+
+			cout << "IO thread " << m_tid
+					<< " handling closed connection from client "
+					<< connection->getPeerIp() << " on socket "
+					<< connection->getSocket() << endl;
+
+			// Close connection
+			connection->closeConnection();
+
+			// Continue event loop
+			return -1;
+		}
+
+		length += (buffer[0] & 127) * multiplier;
+		multiplier *= 128;
+
+		// Malformed remaining length
+		if (multiplier > 128 * 128 * 128)
+			return -1;
+
+	} while ((buffer[0] & 128) != 0);
+
+	// Return length
+	return length;
+}
 
 void* IOThread::run() {
 
@@ -50,7 +115,7 @@ void* IOThread::run() {
 
 				/* Closing the descriptor will make epoll remove it
 				 from the set of descriptors which are monitored. */
-				close(connection->getSocket());
+				connection->closeConnection();
 
 				continue;
 
@@ -66,44 +131,87 @@ void* IOThread::run() {
 						<< connection->getPeerIp() << " on socket "
 						<< connection->getSocket() << endl;
 
-				char buffer[500];
-				int received = connection->receive(buffer, sizeof buffer);
+				// Get message type
+				int msg_type = getMessageControlType(connection);
 
-				if (received > 0) {
-					// Got the data from the socket
+				// Get message connection
+				int message_length = getMessageLength(connection);
+				if (message_length == -1) {
 
-					cout << "IO thread " << m_tid << " received " << received
-							<< " bytes from socket " << connection->getSocket()
-							<< endl;
-
-
-					// Reset what we are watching for
-					events[i].events = EPOLLIN | EPOLLET | EPOLLONESHOT;
-					// tell epoll to re-enable this fd.
-					int result = epoll_ctl(m_epoll_fd, EPOLL_CTL_MOD,
-							connection->getSocket(), &events[i]);
-
-					if (result == -1) {
-						cout << "epoll_ctl() failed: " << errno << endl;
-
-						// Close connection
-						close(connection->getSocket());
-
-					}
-
-				} else if (received == 0) {
-					// Client closed connection
-
-					cout << "IO thread " << m_tid
-							<< " handling closed connection from client "
+					cout << "IO Thread " << m_tid
+							<< " could not get message length from client "
 							<< connection->getPeerIp() << " on socket "
 							<< connection->getSocket() << endl;
 
 					// Close connection
-					close(connection->getSocket());
+					connection->closeConnection();
 
-					// Continue event loop
 					continue;
+
+				} else {
+
+					cout << "IO Thread " << m_tid << " obtaining total of "
+							<< message_length << " message bytes from "
+							<< connection->getPeerIp() << " on socket "
+							<< connection->getSocket() << endl;
+
+					char msgbuff[message_length];
+
+					int bytes_received = 0;
+					bool handleNextEvent = false;
+
+					while (bytes_received < message_length) {
+
+						// Receive bytes
+						int rcvd = connection->receive(msgbuff, message_length);
+
+						if (rcvd == 0) {
+							cout << "IO thread " << m_tid
+									<< " handling closed connection from client "
+									<< connection->getPeerIp() << " on socket "
+									<< connection->getSocket() << endl;
+
+							// Close connection
+							connection->closeConnection();
+
+							handleNextEvent = true;
+							break;
+						}
+
+						bytes_received += rcvd;
+
+					};
+
+					if (handleNextEvent) {
+						// Continue to next event
+						continue;
+					}
+
+					if (msg_type == MqttControlPacketType::CONNECT) {
+						// Handling CONNECT message
+
+						cout << "IO Thread " << m_tid
+								<< " handling CONNECT message from client "
+								<< connection->getPeerIp() << " on socket "
+								<< connection->getSocket() << endl;
+
+						// TODO Handle message
+					}
+
+				}
+
+				// Reset what we are watching for
+				events[i].events = EPOLLIN | EPOLLET | EPOLLONESHOT;
+				// tell epoll to re-enable this fd.
+				int result = epoll_ctl(m_epoll_fd, EPOLL_CTL_MOD,
+						connection->getSocket(), &events[i]);
+
+				if (result == -1) {
+					cout << "epoll_ctl() failed: " << errno << endl;
+
+					// Close connection
+					connection->closeConnection();
+
 				}
 
 			}

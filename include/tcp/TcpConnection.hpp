@@ -85,6 +85,11 @@ public:
 	 * Receive from the socket
 	 */
 	ssize_t receive(char* buffer, size_t length);
+
+	/**
+	 * Closes connection
+	 */
+	void closeConnection();
 };
 
 }

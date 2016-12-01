@@ -28,6 +28,16 @@ private:
 	 */
 	bool reenableSocketDescriptor(int socketd);
 
+	/**
+	 * Returns message length
+	 */
+	int getMessageLength(TcpConnection* connection);
+
+	/**
+	 * Returns message control type
+	 */
+	int getMessageControlType(TcpConnection* connection);
+
 public:
 
 	/**

@@ -10,6 +10,7 @@
 #include <stddef.h>
 #include <sys/select.h>
 #include <sys/time.h>
+#include <iostream>
 
 #include "TcpConnection.hpp"
 
@@ -26,7 +27,7 @@ TcpConnection::TcpConnection(int socketd, struct sockaddr_in* address) :
 }
 
 TcpConnection::~TcpConnection() {
-	close(m_sd);
+	closeConnection();
 }
 
 ssize_t TcpConnection::send(const char* buffer, size_t length) {
@@ -45,6 +46,12 @@ int TcpConnection::getPeerPort() {
 	return m_peer_port;
 }
 
-int TcpConnection::getSocket(){
+int TcpConnection::getSocket() {
 	return m_sd;
+}
+
+void TcpConnection::closeConnection() {
+	cout << "Closing connection from " << m_peer_ip << " on socket " << m_sd
+			<< endl;
+	close(m_sd);
 }

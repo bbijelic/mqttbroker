@@ -34,11 +34,6 @@ int main(int argc, char *argv[]) {
 	// Start IO thread
 	io_thread_1->start();
 
-	// Initialize IO thread
-	IOThread* io_thread_2 = new IOThread(epoll_fd);
-	// Start IO thread
-	io_thread_2->start();
-
 	// TCP Connection queue
 	TcpConnectionQueue<TcpConnection*> tcp_connection_queue;
 
@@ -61,7 +56,6 @@ int main(int argc, char *argv[]) {
 
 	// Delete IO threads
 	delete io_thread_1;
-	delete io_thread_2;
 
 	return 0;
 
