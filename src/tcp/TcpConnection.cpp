@@ -8,8 +8,6 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <stddef.h>
-#include <sys/select.h>
-#include <sys/time.h>
 #include <iostream>
 
 #include "easylogging++.hpp"

@@ -2,6 +2,9 @@
 #include "TcpConnectionQueue.hpp"
 #include "TcpConnectionHandler.hpp"
 #include "IOThread.hpp"
+#include "ServerConfiguration.hpp"
+#include "ConfigurationException.hpp"
+
 #include "easylogging++.hpp"
 
 #include <sys/epoll.h>
@@ -11,6 +14,7 @@ INITIALIZE_EASYLOGGINGPP
 
 using namespace std;
 using namespace TCP;
+using namespace Configuration;
 
 static int initialize_epoll() {
 	int epoll_fd = epoll_create1(0);
@@ -48,6 +52,26 @@ static void registerShutdownHandler() {
 	signal(SIGTERM, shutdownHandler);
 }
 
+static ServerConfiguration* loadConfiguration(string config_filepath){
+
+	// Initialize configuration
+	ServerConfiguration* server_config = NULL;
+
+	try {
+
+		// Initialize and parse server configuration
+		server_config = new ServerConfiguration();
+		server_config->parseConfiguration(config_filepath);
+
+	} catch (ConfigurationException &ce){
+		LOG(ERROR) << "Configuration error: " << ce.getMessage();
+		abort();
+	}
+
+	return server_config;
+
+}
+
 /**
  * Main
  */
@@ -59,6 +83,11 @@ int main(int argc, char *argv[]) {
 
 	// Registering shutdown handler
 	registerShutdownHandler();
+
+	// Load configuration
+	ServerConfiguration* server_config = loadConfiguration("config/broker.cfg");
+
+	LOG(INFO) << "Starting broker node " << server_config->getNodeName();
 
 	// initialize epoll
 	int epoll_fd = initialize_epoll();
@@ -81,6 +110,9 @@ int main(int argc, char *argv[]) {
 	TcpListener* tcp_listener = new TcpListener(1883, tcp_connection_queue);
 	// Start listening for incomming connections
 	tcp_listener->startListening();
+
+	// Delete server configuration
+	delete server_config;
 
 	// Delete tcp listener
 	delete tcp_listener;
