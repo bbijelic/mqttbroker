@@ -9,14 +9,19 @@
 #define TCPLISTENER_HPP_
 
 #include "TcpConnection.hpp"
-#include "TcpConnectionQueue.hpp"
+#include "ConnectionQueue.hpp"
+#include "Connection.hpp"
+#include "Thread.hpp"
 
+using namespace Concurrency;
+
+namespace Networking {
 namespace TCP {
 
 /**
  * Listens for incomming connections
  */
-class TcpListener {
+class TcpListener: public Thread {
 private:
 
 	/**
@@ -25,9 +30,9 @@ private:
 	int m_port;
 
 	/**
-	 * TCP connection queue
+	 * Connection queue
 	 */
-	TcpConnectionQueue<TcpConnection*>& m_queue;
+	ConnectionQueue<Connection*>& m_queue;
 
 	/**
 	 * Socket descriptor
@@ -44,9 +49,10 @@ public:
 	/**
 	 * Constructor
 	 */
-	TcpListener(int port, TcpConnectionQueue<TcpConnection*>& queue) :
+	TcpListener(int port, ConnectionQueue<Connection*>& queue) :
 			m_port(port), m_queue(queue), m_sd(0) {
-	};
+	}
+	;
 
 	/**
 	 * Destructor
@@ -56,10 +62,11 @@ public:
 	/**
 	 * Run
 	 */
-	void startListening();
+	void* run();
 
 };
 
+}
 }
 
 #endif /* TCPLISTENER_HPP_ */

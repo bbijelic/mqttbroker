@@ -5,15 +5,16 @@
  *      Author: dev
  */
 
-#ifndef TCP_IOTHREAD_HPP_
-#define TCP_IOTHREAD_HPP_
+#ifndef IO_IOTHREAD_HPP_
+#define IO_IOTHREAD_HPP_
 
-#include "TcpConnection.hpp"
+#include "Connection.hpp"
 #include "Thread.hpp"
 
 using namespace Concurrency;
+using namespace Networking;
 
-namespace TCP {
+namespace IO {
 
 class IOThread : public Thread {
 private:
@@ -31,12 +32,12 @@ private:
 	/**
 	 * Returns message length
 	 */
-	int getMessageLength(TcpConnection* connection);
+	int getMessageLength(Connection* connection);
 
 	/**
 	 * Returns message control type
 	 */
-	int getMessageControlType(TcpConnection* connection);
+	int getMessageControlType(Connection* connection);
 
 public:
 
@@ -54,4 +55,4 @@ public:
 
 }
 
-#endif /* TCP_IOTHREAD_HPP_ */
+#endif /* IO_IOTHREAD_HPP_ */

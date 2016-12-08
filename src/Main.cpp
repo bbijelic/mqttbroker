@@ -1,6 +1,6 @@
 #include "TcpListener.hpp"
-#include "TcpConnectionQueue.hpp"
-#include "TcpConnectionHandler.hpp"
+#include "ConnectionQueue.hpp"
+#include "ConnectionHandler.hpp"
 #include "IOThread.hpp"
 #include "ServerConfiguration.hpp"
 #include "ConfigurationException.hpp"
@@ -8,12 +8,16 @@
 #include "easylogging++.hpp"
 
 #include <sys/epoll.h>
+#include <SslListener.hpp>
 #include <csignal>
 
 INITIALIZE_EASYLOGGINGPP
 
 using namespace std;
-using namespace TCP;
+using namespace IO;
+using namespace Networking;
+using namespace Networking::TCP;
+using namespace Networking::Security;
 using namespace Configuration;
 
 static int initialize_epoll() {
@@ -52,7 +56,7 @@ static void registerShutdownHandler() {
 	signal(SIGTERM, shutdownHandler);
 }
 
-static ServerConfiguration* loadConfiguration(string config_filepath){
+static ServerConfiguration* loadConfiguration(string config_filepath) {
 
 	// Initialize configuration
 	ServerConfiguration* server_config = NULL;
@@ -63,8 +67,8 @@ static ServerConfiguration* loadConfiguration(string config_filepath){
 		server_config = new ServerConfiguration();
 		server_config->parseConfiguration(config_filepath);
 
-	} catch (ConfigurationException &ce){
-		LOG(ERROR) << "Configuration error: " << ce.getMessage();
+	} catch (ConfigurationException &ce) {
+		LOG(ERROR)<< "Configuration error: " << ce.getMessage();
 		abort();
 	}
 
@@ -87,29 +91,45 @@ int main(int argc, char *argv[]) {
 	// Load configuration
 	ServerConfiguration* server_config = loadConfiguration("config/broker.cfg");
 
-	LOG(INFO) << "Starting broker node " << server_config->getNodeName();
+	LOG(INFO)<< "Starting broker node " << server_config->getNodeName();
 
 	// initialize epoll
 	int epoll_fd = initialize_epoll();
 
 	// Initialize IO thread
-	IOThread* io_thread_1 = new IOThread(epoll_fd);
+	IOThread* io_thread = new IOThread(epoll_fd);
 	// Start IO thread
-	io_thread_1->start();
+	io_thread->start();
 
-	// TCP Connection queue
-	TcpConnectionQueue<TcpConnection*> tcp_connection_queue;
+	// Connection queue
+	ConnectionQueue<Connection*> connection_queue;
 
-	// TCP connection handler
-	TcpConnectionHandler* tcp_connection_handler = new TcpConnectionHandler(
-			tcp_connection_queue, epoll_fd);
+	// Connection handler
+	ConnectionHandler* connection_handler = new ConnectionHandler(
+			connection_queue, epoll_fd);
 	// Start handler
-	tcp_connection_handler->start();
+	connection_handler->start();
 
 	// Tcp Listener
-	TcpListener* tcp_listener = new TcpListener(1883, tcp_connection_queue);
-	// Start listening for incomming connections
-	tcp_listener->startListening();
+	TcpListener* tcp_listener = new TcpListener(1883, connection_queue);
+	// Start listening for incomming connections on TCP port
+	tcp_listener->start();
+
+	// SSL Listener
+	SslListener* ssl_listener = new SslListener(connection_queue, 1884,
+			"config/cert/ca.crt", "config/cert/server.crt",
+			"config/cert/server.key", true);
+	// Start listening for inclomming connections on SSL port
+	ssl_listener->start();
+
+	// Join the SSL listener
+	ssl_listener->join();
+	// Join the TCP listener
+	tcp_listener->join();
+	// Join the connection handler
+	connection_handler->join();
+	// Join the IO Thread
+	io_thread->join();
 
 	// Delete server configuration
 	delete server_config;
@@ -118,10 +138,10 @@ int main(int argc, char *argv[]) {
 	delete tcp_listener;
 
 	// Delete tcp connection handler
-	delete tcp_connection_handler;
+	delete connection_handler;
 
 	// Delete IO threads
-	delete io_thread_1;
+	delete io_thread;
 
 	return 0;
 

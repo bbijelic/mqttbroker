@@ -13,38 +13,18 @@
 #include <unistd.h>
 #include <string>
 
+#include "Connection.hpp"
+
 using namespace std;
 
+namespace Networking {
 namespace TCP {
 
 /**
  * Tcp Connection
  */
-class TcpConnection {
-private:
-
-	/**
-	 * Socket descriptor
-	 */
-	int m_sd;
-
-	/**
-	 * Peer IP address
-	 */
-	string m_peer_ip;
-
-	/**
-	 * Peer port
-	 */
-	int m_peer_port;
-
-
+class TcpConnection : public Connection {
 public:
-
-	/**
-	 * Constructor
-	 */
-	TcpConnection();
 
 	/**
 	 * Constructor
@@ -62,21 +42,6 @@ public:
 	~TcpConnection();
 
 	/**
-	 * Returns peer ip address
-	 */
-	string getPeerIp();
-
-	/**
-	 * Returns peer port
-	 */
-	int getPeerPort();
-
-	/**
-	 * Returns socket file descriptor
-	 */
-	int getSocket();
-
-	/**
 	 * Sends via socket
 	 */
 	ssize_t send(const char* buffer, size_t length);
@@ -86,12 +51,9 @@ public:
 	 */
 	ssize_t receive(char* buffer, size_t length);
 
-	/**
-	 * Closes connection
-	 */
-	void closeConnection();
 };
 
+}
 }
 
 #endif /* TCP_TCPCONNECTION_HPP_ */

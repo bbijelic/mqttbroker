@@ -13,7 +13,10 @@ include_directories("include/concurrency")
 include_directories("include/config")
 include_directories("include/logging")
 include_directories("include/mqtt")
-include_directories("include/tcp")
+include_directories("include/io")
+include_directories("include/networking")
+include_directories("include/networking/tcp")
+include_directories("include/networking/ssl")
 
 # Copyng configuration to the build directory
 file(COPY "config" DESTINATION ${CMAKE_BINARY_DIR})
@@ -25,5 +28,5 @@ file(GLOB_RECURSE SOURCES "src/*.cpp")
 add_executable(mqttbroker ${SOURCES})
 
 # Linking
-set ( PROJECT_LINK_LIBS pthread libconfig++.so )
+set ( PROJECT_LINK_LIBS pthread libconfig++.so ssl crypto )
 target_link_libraries(mqttbroker ${PROJECT_LINK_LIBS})

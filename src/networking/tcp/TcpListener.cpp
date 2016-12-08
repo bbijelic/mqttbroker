@@ -5,7 +5,6 @@
  *      Author: dev
  */
 
-#include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/epoll.h>
@@ -19,9 +18,9 @@
 #include "TcpListener.hpp"
 
 using namespace std;
-using namespace TCP;
+using namespace Networking::TCP;
 
-void TcpListener::startListening(){
+void* TcpListener::run(){
 
 	// Open socket
 	m_sd = socket(PF_INET, SOCK_STREAM, 0);
@@ -42,35 +41,35 @@ void TcpListener::startListening(){
 	int result = bind(m_sd, (struct sockaddr*) &address, sizeof(address));
 
 	if (result != 0) {
-		LOG(ERROR) << "bind() failed: " << errno;
-		return;
+		LOG(ERROR) << "TCP listener bind() failed: " << errno;
+		return NULL;
 	}
 
 	result = listen(m_sd, 5);
 	if(result !=0){
-		LOG(ERROR) << "listen() failed";
-		return;
+		LOG(ERROR) << "TCP listener listen() failed";
+		return NULL;
 	}
 
-	LOG(INFO) << "Listening on port " << m_port;
+	LOG(INFO) << "TCP listener listening on port " << m_port;
 
 	// Loop indefinitely and accept connections
 	while(true){
 
-		LOG(INFO) << "Waiting for incomming connections";
+		LOG(INFO) << "TCP listener waiting for incomming connections";
 
 		// Blocks until connection is returned
 		TcpConnection* connection = acceptConnections();
 
 		if(!connection){
-			LOG(ERROR) << "Could not accept connection";
+			LOG(ERROR) << "TCP listener could not accept connection";
 			continue;
 		}
 
 		// Adding connection to the queue
 		m_queue.add(connection);
 
-		LOG(INFO) << "Connection from " << connection->getPeerIp() << " added to the I0 Queue";
+		LOG(INFO) << "TCP listener added connection from " << connection->getPeerIp() << " to the IO Queue";
 	}
 
 }
@@ -88,7 +87,7 @@ TcpConnection* TcpListener::acceptConnections() {
 	LOG(INFO) << "TCP listener accepted connection on socket " << con_sd;
 
 	if (con_sd < 0) {
-		LOG(ERROR) << "accept() failed: " << errno;
+		LOG(ERROR) << "TCP listener accept() failed: " << errno;
 		return NULL;
 	}
 
@@ -100,7 +99,7 @@ TcpConnection* TcpListener::acceptConnections() {
 
 TcpListener::~TcpListener(){
 	if(m_sd > 0) {
-		LOG(INFO) << "Closing socket " << m_sd;
+		LOG(DEBUG) << "TCP listener closing socket " << m_sd;
 		close(m_sd);
 	}
 }

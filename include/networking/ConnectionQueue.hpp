@@ -1,24 +1,25 @@
 /*
- * WorkQueue.hpp
+ * ConnectionQueue.hpp
  *
  *  Created on: Nov 24, 2016
  *      Author: dev
  */
 
-#ifndef CONCURRENCY_TCPCONNECTIONQUEUE_HPP_
-#define CONCURRENCY_TCPCONNECTIONQUEUE_HPP_
+#ifndef CONCURRENCY_CONNECTIONQUEUE_HPP_
+#define CONCURRENCY_CONNECTIONQUEUE_HPP_
 
 #include <pthread.h>
+#include <stddef.h>
 #include <list>
 
 using namespace std;
 
-namespace TCP {
+namespace Networking {
 
 /**
  * Template TCP connection queue class
  */
-template<typename T> class TcpConnectionQueue {
+template<typename T> class ConnectionQueue {
 private:
 
 	/**
@@ -41,7 +42,7 @@ public:
 	/**
 	 * Constructor
 	 */
-	TcpConnectionQueue() {
+	ConnectionQueue() {
 		pthread_mutex_init(&m_mutex, NULL);
 		pthread_cond_init(&m_condv, NULL);
 	}
@@ -49,7 +50,7 @@ public:
 	/**
 	 * Destructor
 	 */
-	~TcpConnectionQueue() {
+	~ConnectionQueue() {
 		pthread_mutex_destroy(&m_mutex);
 		pthread_cond_destroy(&m_condv);
 	}
@@ -92,4 +93,4 @@ public:
 
 }
 
-#endif /* CONCURRENCY_TCPCONNECTIONQUEUE_HPP_ */
+#endif /* CONCURRENCY_CONNECTIONQUEUE_HPP_ */

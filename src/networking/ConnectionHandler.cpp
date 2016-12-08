@@ -1,5 +1,5 @@
 /*
- * TcpConnectionHandler.cpp
+ * ConnectionHandler.cpp
  *
  *  Created on: Nov 24, 2016
  *      Author: dev
@@ -10,21 +10,21 @@
 #include <iostream>
 #include <sys/epoll.h>
 
+#include "ConnectionHandler.hpp"
 #include "easylogging++.hpp"
-#include "TcpConnectionHandler.hpp"
 
 using namespace std;
-using namespace TCP;
+using namespace Networking;
 
 /**
  * Constructor
  */
-TcpConnectionHandler::TcpConnectionHandler(
-		TcpConnectionQueue<TcpConnection*>& queue, int epoll_fd) :
+ConnectionHandler::ConnectionHandler(
+		ConnectionQueue<Connection*>& queue, int epoll_fd) :
 		m_queue(queue), m_epoll_fd(epoll_fd) {
 }
 
-void* TcpConnectionHandler::run() {
+void* ConnectionHandler::run() {
 
 	LOG(INFO)<< "Connection handler thread " << m_tid << " initializing";
 
@@ -33,7 +33,7 @@ void* TcpConnectionHandler::run() {
 	while (true) {
 
 		// Obtain TCP connection from the queue
-		TcpConnection* connection = m_queue.remove();
+		Connection* connection = m_queue.remove();
 
 		// TODO handle connection
 		string peer_ip = connection->getPeerIp();
@@ -56,7 +56,7 @@ void* TcpConnectionHandler::run() {
 
 }
 
-bool TcpConnectionHandler::registerSocketToEpoll(TcpConnection *connection) {
+bool ConnectionHandler::registerSocketToEpoll(Connection *connection) {
 
 	struct epoll_event event;
 	event.data.fd = connection->getSocket();
@@ -78,7 +78,7 @@ bool TcpConnectionHandler::registerSocketToEpoll(TcpConnection *connection) {
 	return true;
 }
 
-bool TcpConnectionHandler::makeSocketNonBlocking(int socketd) {
+bool ConnectionHandler::makeSocketNonBlocking(int socketd) {
 	int flags, s;
 
 	flags = fcntl(socketd, F_GETFL, 0);

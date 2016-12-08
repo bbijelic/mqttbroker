@@ -1,28 +1,28 @@
 /*
- * TcpConnectionHandler.hpp
+ * ConnectionHandler.hpp
  *
  *  Created on: Nov 24, 2016
  *      Author: dev
  */
 
-#ifndef TCP_TCPCONNECTIONHANDLER_HPP_
-#define TCP_TCPCONNECTIONHANDLER_HPP_
+#ifndef NETWORKING_CONNECTIONHANDLER_HPP_
+#define NETWORKING_CONNECTIONHANDLER_HPP_
 
-#include "TcpConnectionQueue.hpp"
-#include "TcpConnection.hpp"
+#include "ConnectionQueue.hpp"
+#include "Connection.hpp"
 #include "Thread.hpp"
 
 using namespace Concurrency;
 
-namespace TCP {
+namespace Networking {
 
-class TcpConnectionHandler : public Thread {
+class ConnectionHandler : public Thread {
 private:
 
 	/**
 	 * TCP connection queue
 	 */
-	TcpConnectionQueue<TcpConnection*>& m_queue;
+	ConnectionQueue<Connection*>& m_queue;
 
 	/**
 	 * Epoll file descriptor
@@ -37,14 +37,14 @@ private:
 	/**
 	 * Registers socket for the events on the epoll
 	 */
-	bool registerSocketToEpoll(TcpConnection *connection);
+	bool registerSocketToEpoll(Connection *connection);
 
 public:
 
 	/**
 	 * Constructor
 	 */
-	TcpConnectionHandler(TcpConnectionQueue<TcpConnection*>& queue, int epoll_fd);
+	ConnectionHandler(ConnectionQueue<Connection*>& queue, int epoll_fd);
 
 	/**
 	 * Run
@@ -55,4 +55,4 @@ public:
 
 }
 
-#endif /* TCP_TCPCONNECTIONHANDLER_HPP_ */
+#endif /* NETWORKING_CONNECTIONHANDLER_HPP_ */

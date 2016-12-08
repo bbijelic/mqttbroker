@@ -1,0 +1,86 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 2 (0x2)
+    Signature Algorithm: sha256WithRSAEncryption
+        Issuer: C=HR, ST=Slavonija, L=Osijek, O=bbijelic.github.com, OU=dev, CN=localhost
+        Validity
+            Not Before: Dec  8 20:03:52 2016 GMT
+            Not After : Jan 16 20:03:52 2022 GMT
+        Subject: C=HR, ST=Slavonija, O=bbijelic.github.com, OU=dev, CN=MQTT.client.1/emailAddress=mqtt.client.1@bbijelic.github.com
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                Public-Key: (2048 bit)
+                Modulus:
+                    00:dd:a5:bb:a8:e0:4c:8d:ba:15:e4:e1:d3:56:14:
+                    db:cb:de:e2:a4:57:26:34:ab:8f:fb:13:ab:0a:45:
+                    85:f5:36:a0:f5:66:39:45:11:70:d8:10:1b:12:0f:
+                    9c:52:d7:55:60:0e:5a:f3:67:3a:5d:61:34:50:03:
+                    e6:a6:39:53:8c:ac:b1:80:f5:a2:bc:52:73:1d:11:
+                    a3:98:5e:ee:b2:fa:e8:e1:ca:18:f1:ba:a0:4a:ae:
+                    97:2e:79:30:8c:92:57:14:d1:19:fb:cf:48:d7:fe:
+                    af:6f:f3:08:a8:09:e4:51:67:77:4e:c9:17:95:62:
+                    b8:f9:e0:cc:2f:e7:fc:69:19:da:13:38:b4:3d:58:
+                    cc:cc:6e:c8:ee:86:cf:d1:40:20:41:68:cf:14:c9:
+                    e0:d0:28:44:72:c5:e0:16:e2:82:0c:ef:59:40:63:
+                    f9:9e:f2:b1:12:ce:73:ab:9b:e9:a3:33:88:42:c3:
+                    b2:ba:6d:9d:02:4e:fa:86:b2:cf:7d:de:a3:f8:9f:
+                    3c:9b:2b:78:d5:af:6b:63:a5:8c:91:5b:a6:29:a6:
+                    77:4d:81:dd:9b:6c:8f:72:a1:a1:3f:0c:b1:fc:91:
+                    8b:2e:34:45:6a:12:5e:fb:b4:3a:44:9e:e1:69:e9:
+                    c1:86:49:f7:71:63:a7:d7:ef:80:83:75:5f:2e:71:
+                    d1:57
+                Exponent: 65537 (0x10001)
+        X509v3 extensions:
+            X509v3 Basic Constraints: 
+                CA:FALSE
+            Netscape Comment: 
+                OpenSSL Generated Certificate
+            X509v3 Subject Key Identifier: 
+                7A:11:D2:8C:2B:50:11:0A:01:27:76:51:71:1C:97:B5:09:90:99:8D
+            X509v3 Authority Key Identifier: 
+                DirName:/C=HR/ST=Slavonija/L=Osijek/O=bbijelic.github.com/OU=dev/CN=localhost
+                serial:EA:2B:19:A6:FD:14:72:64
+
+    Signature Algorithm: sha256WithRSAEncryption
+         29:ec:aa:ad:1f:5b:73:68:25:d7:5e:79:f2:f4:9f:2d:d9:58:
+         95:29:13:6d:22:1a:b3:06:1a:47:d4:8f:3c:d7:c4:fc:cf:1a:
+         9c:e4:09:d6:c6:b3:2b:a4:92:be:d2:9b:50:0e:31:44:8a:f6:
+         94:4e:18:23:28:98:e5:19:4d:b7:50:ca:b4:3e:4e:7b:d7:bb:
+         8d:ff:04:8d:35:4b:19:c5:88:47:59:94:0e:8b:72:4b:1e:84:
+         02:17:2b:11:d5:9f:7c:a5:37:87:f9:e8:b3:42:aa:3a:07:8f:
+         f3:f8:29:be:27:b9:50:16:19:13:f9:4d:11:29:92:7d:fb:31:
+         0b:a1:74:d0:c3:37:f9:83:b2:6b:98:bd:3c:ef:cd:08:b5:f2:
+         77:d9:c9:e0:f9:eb:59:d9:8f:59:87:14:e6:75:bc:40:a3:c4:
+         d0:d5:35:dc:18:2a:24:c0:3e:35:9c:be:35:c2:8e:1a:e7:62:
+         c9:98:7e:e8:45:c0:1a:f9:f3:10:24:2d:d3:1f:a3:ad:b1:09:
+         19:e1:7c:ba:c1:c2:dc:a5:88:5b:68:fe:c5:8a:b8:c8:f5:1f:
+         a3:ea:23:80:82:9f:bc:77:09:55:12:84:64:66:d7:e5:ab:2c:
+         31:f6:42:3b:35:1c:0f:4c:22:41:93:df:72:4b:99:62:a2:8e:
+         40:df:c7:4e
+-----BEGIN CERTIFICATE-----
+MIIEcjCCA1qgAwIBAgIBAjANBgkqhkiG9w0BAQsFADByMQswCQYDVQQGEwJIUjES
+MBAGA1UECAwJU2xhdm9uaWphMQ8wDQYDVQQHDAZPc2lqZWsxHDAaBgNVBAoME2Ji
+aWplbGljLmdpdGh1Yi5jb20xDDAKBgNVBAsMA2RldjESMBAGA1UEAwwJbG9jYWxo
+b3N0MB4XDTE2MTIwODIwMDM1MloXDTIyMDExNjIwMDM1MlowgZcxCzAJBgNVBAYT
+AkhSMRIwEAYDVQQIDAlTbGF2b25pamExHDAaBgNVBAoME2JiaWplbGljLmdpdGh1
+Yi5jb20xDDAKBgNVBAsMA2RldjEWMBQGA1UEAwwNTVFUVC5jbGllbnQuMTEwMC4G
+CSqGSIb3DQEJARYhbXF0dC5jbGllbnQuMUBiYmlqZWxpYy5naXRodWIuY29tMIIB
+IjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3aW7qOBMjboV5OHTVhTby97i
+pFcmNKuP+xOrCkWF9Tag9WY5RRFw2BAbEg+cUtdVYA5a82c6XWE0UAPmpjlTjKyx
+gPWivFJzHRGjmF7usvro4coY8bqgSq6XLnkwjJJXFNEZ+89I1/6vb/MIqAnkUWd3
+TskXlWK4+eDML+f8aRnaEzi0PVjMzG7I7obP0UAgQWjPFMng0ChEcsXgFuKCDO9Z
+QGP5nvKxEs5zq5vpozOIQsOyum2dAk76hrLPfd6j+J88myt41a9rY6WMkVumKaZ3
+TYHdm2yPcqGhPwyx/JGLLjRFahJe+7Q6RJ7haenBhkn3cWOn1++Ag3VfLnHRVwID
+AQABo4HsMIHpMAkGA1UdEwQCMAAwLAYJYIZIAYb4QgENBB8WHU9wZW5TU0wgR2Vu
+ZXJhdGVkIENlcnRpZmljYXRlMB0GA1UdDgQWBBR6EdKMK1ARCgEndlFxHJe1CZCZ
+jTCBjgYDVR0jBIGGMIGDoXakdDByMQswCQYDVQQGEwJIUjESMBAGA1UECAwJU2xh
+dm9uaWphMQ8wDQYDVQQHDAZPc2lqZWsxHDAaBgNVBAoME2JiaWplbGljLmdpdGh1
+Yi5jb20xDDAKBgNVBAsMA2RldjESMBAGA1UEAwwJbG9jYWxob3N0ggkA6isZpv0U
+cmQwDQYJKoZIhvcNAQELBQADggEBACnsqq0fW3NoJddeefL0ny3ZWJUpE20iGrMG
+GkfUjzzXxPzPGpzkCdbGsyukkr7Sm1AOMUSK9pROGCMomOUZTbdQyrQ+TnvXu43/
+BI01SxnFiEdZlA6LcksehAIXKxHVn3ylN4f56LNCqjoHj/P4Kb4nuVAWGRP5TREp
+kn37MQuhdNDDN/mDsmuYvTzvzQi18nfZyeD561nZj1mHFOZ1vECjxNDVNdwYKiTA
+PjWcvjXCjhrnYsmYfuhFwBr58xAkLdMfo62xCRnhfLrBwtyliFto/sWKuMj1H6Pq
+I4CCn7x3CVUShGRm1+WrLDH2Qjs1HA9MIkGT33JLmWKijkDfx04=
+-----END CERTIFICATE-----

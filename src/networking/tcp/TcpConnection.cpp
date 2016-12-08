@@ -13,11 +13,13 @@
 #include "easylogging++.hpp"
 #include "TcpConnection.hpp"
 
-using namespace TCP;
+using namespace Networking::TCP;
 using namespace std;
 
-TcpConnection::TcpConnection(int socketd, struct sockaddr_in* address) :
-		m_sd(socketd) {
+TcpConnection::TcpConnection(int socketd, struct sockaddr_in* address){
+
+	this->m_sd = socketd;
+
 	char ip[50];
 	inet_ntop(PF_INET, (struct in_addr*) &(address->sin_addr.s_addr), ip,
 			sizeof(ip) - 1);
@@ -34,22 +36,6 @@ ssize_t TcpConnection::send(const char* buffer, size_t length) {
 }
 
 ssize_t TcpConnection::receive(char* buffer, size_t length) {
+	LOG(DEBUG) << "Receaving data from TCP socket";
 	return read(m_sd, buffer, length);
-}
-
-string TcpConnection::getPeerIp() {
-	return m_peer_ip;
-}
-
-int TcpConnection::getPeerPort() {
-	return m_peer_port;
-}
-
-int TcpConnection::getSocket() {
-	return m_sd;
-}
-
-void TcpConnection::closeConnection() {
-	LOG(INFO)<< "Closing connection from " << m_peer_ip << " on socket " << m_sd;
-	close(m_sd);
 }

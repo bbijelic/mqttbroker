@@ -6,7 +6,7 @@
  */
 
 #include "IOThread.hpp"
-#include "TcpConnection.hpp"
+#include "Connection.hpp"
 #include "MqttControlPacketType.hpp"
 #include "easylogging++.hpp"
 
@@ -16,10 +16,11 @@
 #define MAXEVENTS 64
 
 using namespace std;
-using namespace TCP;
+using namespace Networking;
+using namespace IO;
 using namespace MQTT;
 
-int IOThread::getMessageControlType(TcpConnection* connection) {
+int IOThread::getMessageControlType(Connection* connection) {
 
 	// Read only one byte, which is message control byte
 	char msgtype[1];
@@ -44,7 +45,7 @@ int IOThread::getMessageControlType(TcpConnection* connection) {
 	return msgtype[0] >> 4;
 }
 
-int IOThread::getMessageLength(TcpConnection* connection) {
+int IOThread::getMessageLength(Connection* connection) {
 
 	int multiplier = 1;
 	int length = 0;
@@ -98,7 +99,7 @@ void* IOThread::run() {
 		for (int i = 0; i < num_events; i++) {
 
 			// Get tcp connection from event data pointer
-			TcpConnection* connection = (TcpConnection*) events[i].data.ptr;
+			Connection* connection = (Connection*) events[i].data.ptr;
 
 			LOG(INFO) << "IO thread " << m_tid << " handles connection from socket "
 					<< connection->getSocket();
