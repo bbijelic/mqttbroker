@@ -1,15 +1,16 @@
-#include "TcpListener.hpp"
-#include "ConnectionQueue.hpp"
-#include "ConnectionHandler.hpp"
-#include "IOThread.hpp"
-#include "ServerConfiguration.hpp"
-#include "ConfigurationException.hpp"
-
-#include "easylogging++.hpp"
-
+#include <ConfigurationException.hpp>
+#include <Connection.hpp>
+#include <ConnectionHandler.hpp>
+#include <ConnectionQueue.hpp>
+#include <easylogging++.hpp>
+#include <IOThread.hpp>
+#include <ListenerManager.hpp>
 #include <sys/epoll.h>
-#include <SslListener.hpp>
+#include <ServerConfiguration.hpp>
+#include <cerrno>
 #include <csignal>
+#include <cstdlib>
+#include <string>
 
 INITIALIZE_EASYLOGGINGPP
 
@@ -110,22 +111,11 @@ int main(int argc, char *argv[]) {
 	// Start handler
 	connection_handler->start();
 
-	// Tcp Listener
-	TcpListener* tcp_listener = new TcpListener(1883, connection_queue);
-	// Start listening for incomming connections on TCP port
-	tcp_listener->start();
+	// Initialize listener manager
+	ListenerManager* listener_mngr = new ListenerManager(connection_queue, server_config);
+	// Start listeners
+	listener_mngr->startListeners();
 
-	// SSL Listener
-	SslListener* ssl_listener = new SslListener(connection_queue, 1884,
-			"config/cert/ca.crt", "config/cert/server.crt",
-			"config/cert/server.key", true);
-	// Start listening for inclomming connections on SSL port
-	ssl_listener->start();
-
-	// Join the SSL listener
-	ssl_listener->join();
-	// Join the TCP listener
-	tcp_listener->join();
 	// Join the connection handler
 	connection_handler->join();
 	// Join the IO Thread
@@ -134,8 +124,8 @@ int main(int argc, char *argv[]) {
 	// Delete server configuration
 	delete server_config;
 
-	// Delete tcp listener
-	delete tcp_listener;
+	// Delete listener manager
+	delete listener_mngr;
 
 	// Delete tcp connection handler
 	delete connection_handler;

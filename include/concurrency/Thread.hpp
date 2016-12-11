@@ -23,6 +23,11 @@ protected:
 	 */
 	pthread_t m_tid;
 
+	/**
+	 * Should thread gracefully stop
+	 */
+	bool m_graceful_stop;
+
 private:
 
 	/**
@@ -51,6 +56,11 @@ public:
 	 * Start thread
 	 */
 	int start();
+
+	/**
+	 * Graceful stop
+	 */
+	void gracefulStop();
 
 	/**
 	 * Join thread

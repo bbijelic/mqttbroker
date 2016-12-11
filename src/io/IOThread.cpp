@@ -88,7 +88,7 @@ void* IOThread::run() {
 	struct epoll_event *events = (epoll_event *) calloc(MAXEVENTS,
 			sizeof(struct epoll_event));
 
-	while (true) {
+	while (!m_graceful_stop) {
 
 		// Get epoll events
 		int num_events = epoll_wait(m_epoll_fd, events, MAXEVENTS, -1);
@@ -220,6 +220,8 @@ void* IOThread::run() {
 
 		}
 	}
+
+	return NULL;
 
 }
 

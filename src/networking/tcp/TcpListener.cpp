@@ -20,7 +20,7 @@
 using namespace std;
 using namespace Networking::TCP;
 
-void* TcpListener::run(){
+void* TcpListener::run() {
 
 	// Open socket
 	m_sd = socket(PF_INET, SOCK_STREAM, 0);
@@ -41,27 +41,27 @@ void* TcpListener::run(){
 	int result = bind(m_sd, (struct sockaddr*) &address, sizeof(address));
 
 	if (result != 0) {
-		LOG(ERROR) << "TCP listener bind() failed: " << errno;
+		LOG(ERROR)<< "TCP listener bind() failed: " << errno;
 		return NULL;
 	}
 
 	result = listen(m_sd, 5);
-	if(result !=0){
-		LOG(ERROR) << "TCP listener listen() failed";
+	if (result != 0) {
+		LOG(ERROR)<< "TCP listener listen() failed";
 		return NULL;
 	}
 
-	LOG(INFO) << "TCP listener listening on port " << m_port;
+	LOG(INFO)<< "TCP listener listening on port " << m_port;
 
 	// Loop indefinitely and accept connections
-	while(true){
+	while (true) {
 
-		LOG(INFO) << "TCP listener waiting for incomming connections";
+		LOG(INFO)<< "TCP listener waiting for incomming connections";
 
 		// Blocks until connection is returned
 		TcpConnection* connection = acceptConnections();
 
-		if(!connection){
+		if(!connection) {
 			LOG(ERROR) << "TCP listener could not accept connection";
 			continue;
 		}
@@ -82,12 +82,12 @@ TcpConnection* TcpListener::acceptConnections() {
 
 	memset(&address, 0, len);
 
-	int con_sd = ::accept(m_sd, (struct sockaddr*)&address, &len);
+	int con_sd = ::accept(m_sd, (struct sockaddr*) &address, &len);
 
-	LOG(INFO) << "TCP listener accepted connection on socket " << con_sd;
+	LOG(INFO)<< "TCP listener accepted connection on socket " << con_sd;
 
 	if (con_sd < 0) {
-		LOG(ERROR) << "TCP listener accept() failed: " << errno;
+		LOG(ERROR)<< "TCP listener accept() failed: " << errno;
 		return NULL;
 	}
 
@@ -96,12 +96,10 @@ TcpConnection* TcpListener::acceptConnections() {
 
 }
 
-
-TcpListener::~TcpListener(){
-	if(m_sd > 0) {
-		LOG(DEBUG) << "TCP listener closing socket " << m_sd;
+TcpListener::~TcpListener() {
+	if (m_sd > 0) {
+		LOG(DEBUG)<< "TCP listener closing socket " << m_sd;
 		close(m_sd);
 	}
 }
-
 

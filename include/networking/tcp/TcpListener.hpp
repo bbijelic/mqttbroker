@@ -12,7 +12,11 @@
 #include "ConnectionQueue.hpp"
 #include "Connection.hpp"
 #include "Thread.hpp"
+#include "Listener.hpp"
 
+#include <string>
+
+using namespace std;
 using namespace Concurrency;
 
 namespace Networking {
@@ -21,23 +25,8 @@ namespace TCP {
 /**
  * Listens for incomming connections
  */
-class TcpListener: public Thread {
+class TcpListener: public Listener {
 private:
-
-	/**
-	 * Port
-	 */
-	int m_port;
-
-	/**
-	 * Connection queue
-	 */
-	ConnectionQueue<Connection*>& m_queue;
-
-	/**
-	 * Socket descriptor
-	 */
-	int m_sd;
 
 	/**
 	 * Accepts connection
@@ -49,10 +38,8 @@ public:
 	/**
 	 * Constructor
 	 */
-	TcpListener(int port, ConnectionQueue<Connection*>& queue) :
-			m_port(port), m_queue(queue), m_sd(0) {
-	}
-	;
+	TcpListener(int port, string bind, ConnectionQueue<Connection*>& queue) :
+			Listener(port, bind, queue) {};
 
 	/**
 	 * Destructor

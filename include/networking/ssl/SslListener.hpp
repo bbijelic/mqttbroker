@@ -12,6 +12,7 @@
 #include "Thread.hpp"
 #include "SslConnection.hpp"
 #include "Connection.hpp"
+#include "Listener.hpp"
 
 #include <openssl/bio.h>
 #include <openssl/ssl.h>
@@ -19,6 +20,7 @@
 
 #include <string>
 
+using namespace std;
 using namespace Networking;
 using namespace Concurrency;
 
@@ -28,18 +30,8 @@ namespace Security {
 /**
  * SSL listener
  */
-class SslListener: public Thread {
+class SslListener: public Listener {
 private:
-
-	/**
-	 * TCP connection queue
-	 */
-	ConnectionQueue<Connection*>& m_queue;
-
-	/**
-	 * Port
-	 */
-	int m_port;
 
 	/**
 	 * CA certificate file
@@ -60,11 +52,6 @@ private:
 	 * Verify peer
 	 */
 	bool m_verify_peer;
-
-	/**
-	 * Socket descriptor
-	 */
-	int m_sd;
 
 	/**
 	 * SSL context
@@ -96,13 +83,15 @@ public:
 	/**
 	 * Constructor
 	 */
-	SslListener(ConnectionQueue<Connection*>& queue, int port,
+	SslListener(int port, string bind, ConnectionQueue<Connection*>& queue,
 			string ca_cert_file, string server_cert_file,
-			string server_key_file, bool verify_peer) :
-			m_queue(queue), m_port(port), m_ca_cert_file(ca_cert_file), m_server_cert_file(
-					server_cert_file), m_server_key_file(server_key_file), m_verify_peer(
-					verify_peer), m_sd(0), m_ssl_ctx(NULL) {
-	}
+			string server_key_file, bool verify_peer) : Listener(port, bind, queue){
+		this->m_ca_cert_file = ca_cert_file;
+		this->m_server_cert_file = server_cert_file;
+		this->m_server_key_file = server_key_file;
+		this->m_verify_peer = verify_peer;
+		this->m_ssl_ctx = NULL;
+	};
 
 	/**
 	 * Destructor
