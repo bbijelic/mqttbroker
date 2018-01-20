@@ -8,6 +8,7 @@
 #include "IOThread.hpp"
 #include "Connection.hpp"
 #include "MqttControlPacketType.hpp"
+#include "ConnectControlPacketParser.h"
 #include "easylogging++.hpp"
 
 #include <sys/epoll.h>
@@ -18,7 +19,8 @@
 using namespace std;
 using namespace Networking;
 using namespace IO;
-using namespace MQTT;
+using namespace MQTT::Control;
+using namespace MQTT::Control::Connect;
 
 int IOThread::getMessageControlType(Connection* connection) {
 
@@ -196,7 +198,8 @@ void* IOThread::run() {
 								<< connection->getPeerIp() << " on socket "
 								<< connection->getSocket();
 
-						// TODO Handle message
+						// Handle message
+						ConnectControlPacket* connectControlPacket = ConnectControlPacketParser::parse(msgbuff);
 					}
 
 				}

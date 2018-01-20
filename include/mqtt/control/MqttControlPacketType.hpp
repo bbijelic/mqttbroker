@@ -1,7 +1,8 @@
-#ifndef MQTT_CONTROLPACKETTYPE_HPP
-#define MQTT_CONTROLPACKETTYPE_HPP
+#ifndef MQTT_CONTROL_PACKETTYPE_HPP
+#define MQTT_CONTROL_PACKETTYPE_HPP
 
 namespace MQTT {
+namespace Control {
 
 enum MqttControlPacketType {
 
@@ -90,6 +91,7 @@ enum MqttControlPacketType {
 	DISCONNECT = 14
 };
 
+}
 }
 
 #endif
