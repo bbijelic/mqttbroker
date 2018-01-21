@@ -7,8 +7,10 @@
 
 #include "IOThread.hpp"
 #include "Connection.hpp"
-#include "MqttControlPacketType.hpp"
+#include "ControlPacketType.h"
 #include "ConnectControlPacketParser.h"
+#include "ControlPacketFixedHeader.h"
+#include "ConnackControlPacketProducer.h"
 #include "easylogging++.hpp"
 
 #include <sys/epoll.h>
@@ -21,6 +23,7 @@ using namespace Networking;
 using namespace IO;
 using namespace MQTT::Control;
 using namespace MQTT::Control::Connect;
+using namespace MQTT::Control::Connack;
 
 int IOThread::getMessageControlType(Connection* connection) {
 
@@ -198,8 +201,32 @@ void* IOThread::run() {
 								<< connection->getPeerIp() << " on socket "
 								<< connection->getSocket();
 
-						// Handle message
+						// Handle message and return thr CONNACK
 						ConnectControlPacket* connectControlPacket = ConnectControlPacketParser::parse(msgbuff);
+						
+						// Connack control package fixed header
+						ControlPacketFixedHeader* connack_fixed_header = new ControlPacketFixedHeader();
+						connack_fixed_header->control_packet_type = MqttControlPacketType::CONNACK;
+						connack_fixed_header->remaining_length = 2;
+						
+						// Connect acknowledge flags
+						ConnectAcknowledgeFlags* connect_ack_flags = new ConnectAcknowledgeFlags();
+						connect_ack_flags->session_present = 0;
+						
+						// Connack control package variable header
+						ConnackVariableHeader* connack_variable_header = new ConnackVariableHeader();
+						connack_variable_header->acknowledge_flags = connect_ack_flags;
+						connack_variable_header->connect_return_code = ConnectReturnCode::CONNECTION_ACCEPTED;
+						
+						// Initialize connack control package
+						ConnackControlPacket* connack_control_package = new ConnackControlPacket();
+						connack_control_package->fixed_header = connack_fixed_header;
+						connack_control_package->variable_header = connack_variable_header;
+						
+						char* connack_bytes = ConnackControlPacketProducer::serialize(connack_control_package);
+						// Send CONNACK to the client
+						connection->send(connack_bytes, sizeof connack_bytes);
+						
 					}
 
 				}

@@ -1,8 +1,6 @@
 #ifndef MQTT_CONTROL_CONNECT_CONTROLPACKET_H
 #define MQTT_CONTROL_CONNECT_CONTROLPACKET_H
 
-#include <string>
-
 using namespace std;
 
 namespace MQTT {
@@ -42,7 +40,7 @@ struct ConnectFlags {
 struct ConnectVariableHeader {
 
     // Protocol namw
-    string protocol_name;
+    char* protocol_name;
     
     // Protocol level
     unsigned protocol_level;
@@ -60,19 +58,19 @@ struct ConnectVariableHeader {
 struct ConnectPayload {
 
     // Client identifier
-    string client_identifier;
+    char* client_identifier;
     
     // Will topic
-    string will_topic;
+    char* will_topic;
     
     // Will message
-    char will_message[];
+    char* will_message;
     
     // Username
-    string username;
+    char* username;
     
     // Password
-    char password[];
+    char* password;
 };
 
 /**
