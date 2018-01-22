@@ -34,6 +34,11 @@ protected:
 	 * Peer port
 	 */
 	int m_peer_port;
+	
+	/**
+	 * Is connection closed
+	 */
+	bool m_is_closed = false;
 
 public:
 	/**
@@ -65,6 +70,11 @@ public:
 	 * Closes connection
 	 */
 	void closeConnection();
+	
+	/**
+	 * Is connection closed
+	 */
+	bool isClosed();
 
 };
 

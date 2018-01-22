@@ -26,28 +26,26 @@ using namespace MQTT::Control::Connect;
 using namespace MQTT::Control::Connack;
 
 int IOThread::getMessageControlType(Connection* connection) {
-
+    
+    LOG(DEBUG) << "IO thread " << m_tid
+				<< " parsing control type on a connection from client "
+				<< connection->getPeerIp() << " on socket "
+				<< connection->getSocket();
+    
 	// Read only one byte, which is message control byte
-	char msgtype[1];
-	int received = connection->receive(msgtype, 1);
-
-	if (received == 0) {
-		// Client closed connection
+	char control_type_byte_buffer[1];
+	if (connection->receive(control_type_byte_buffer, 1) == 0) {
 
 		LOG(INFO) << "IO thread " << m_tid
-				<< " handling closed connection from client "
+				<< " received no bytes from a client "
 				<< connection->getPeerIp() << " on socket "
 				<< connection->getSocket();
 
-		// Close connection
-		connection->closeConnection();
-
-		// Continue event loop
 		return -1;
 	}
 
 	// Shift bytes to get message type
-	return msgtype[0] >> 4;
+	return control_type_byte_buffer[0] >> 4;
 }
 
 int IOThread::getMessageLength(Connection* connection) {
@@ -139,8 +137,21 @@ void* IOThread::run() {
 
 				// Get message type
 				int msg_type = getMessageControlType(connection);
+				LOG(DEBUG) << "Message type: " << msg_type;
+				
+				if(msg_type == -1){
+				    LOG(ERROR) << "IO Thread " << m_tid
+							<< " could not parse message type from client "
+							<< connection->getPeerIp() << " on socket "
+							<< connection->getSocket();
 
-				// Get message connection
+					// Close connection
+					connection->closeConnection();
+
+					continue;
+				}
+
+				// Get message length
 				int message_length = getMessageLength(connection);
 				if (message_length == -1) {
 
@@ -155,96 +166,111 @@ void* IOThread::run() {
 					continue;
 
 				} else {
+				    
+				    if(message_length > 0){
+				        
+    					LOG(INFO) << "IO Thread " << m_tid << " obtaining total of "
+    							<< message_length << " message bytes from "
+    							<< connection->getPeerIp() << " on socket "
+    							<< connection->getSocket();
+    
+    					char msgbuff[message_length];
+    
+    					int bytes_received = 0;
+    					bool handleNextEvent = false;
+    
+    					while (bytes_received < message_length) {
+    
+    						// Receive bytes
+    						int rcvd = connection->receive(msgbuff, message_length);
+    
+    						if (rcvd == 0) {
+    							LOG(INFO) << "IO thread " << m_tid
+    									<< " handling closed connection from client "
+    									<< connection->getPeerIp() << " on socket "
+    									<< connection->getSocket();
+    
+    							// Close connection
+    							connection->closeConnection();
+    
+    							handleNextEvent = true;
+    							break;
+    						}
+    
+    						bytes_received += rcvd;
+    
+    					};
+    
+    					if (handleNextEvent) {
+    						// Continue to next event
+    						continue;
+    					}
+    					
+    					if (msg_type == MqttControlPacketType::CONNECT) {
+    						// Handling CONNECT message
+    
+    						LOG(INFO) << "IO Thread (" << m_tid
+    								<< ") handling CONNECT message from client "
+    								<< connection->getPeerIp() << " on socket "
+    								<< connection->getSocket();
+    
+    						// Handle message and return thr CONNACK
+    						ConnectControlPacket* connectControlPacket = ConnectControlPacketParser::parse(msgbuff);
+    						
+    						// Connack control package fixed header
+    						ControlPacketFixedHeader* connack_fixed_header = new ControlPacketFixedHeader();
+    						connack_fixed_header->control_packet_type = MqttControlPacketType::CONNACK;
+    						connack_fixed_header->remaining_length = 2;
+    						
+    						// Connect acknowledge flags
+    						ConnectAcknowledgeFlags* connect_ack_flags = new ConnectAcknowledgeFlags();
+    						connect_ack_flags->session_present = 0;
+    						
+    						// Connack control package variable header
+    						ConnackVariableHeader* connack_variable_header = new ConnackVariableHeader();
+    						connack_variable_header->acknowledge_flags = connect_ack_flags;
+    						connack_variable_header->connect_return_code = ConnectReturnCode::CONNECTION_ACCEPTED;
+    						
+    						// Initialize connack control package
+    						ConnackControlPacket* connack_control_package = new ConnackControlPacket();
+    						connack_control_package->fixed_header = connack_fixed_header;
+    						connack_control_package->variable_header = connack_variable_header;
+    						
+    						char* connack_bytes = ConnackControlPacketProducer::serialize(connack_control_package);
+    						// Send CONNACK to the client
+    						connection->send(connack_bytes, sizeof connack_bytes);
+    						
+    					}
+				        				        
+				    } else {
+				        
+    					if (msg_type == MqttControlPacketType::DISCONNECT){
+    					    
+    					    LOG(INFO) << "IO Thread (" << m_tid
+    								<< ") handling DISCONNECT message from client "
+    								<< connection->getPeerIp() << " on socket "
+    								<< connection->getSocket();
+    					    
+    					}
+				    }
 
-					LOG(INFO) << "IO Thread " << m_tid << " obtaining total of "
-							<< message_length << " message bytes from "
-							<< connection->getPeerIp() << " on socket "
-							<< connection->getSocket();
-
-					char msgbuff[message_length];
-
-					int bytes_received = 0;
-					bool handleNextEvent = false;
-
-					while (bytes_received < message_length) {
-
-						// Receive bytes
-						int rcvd = connection->receive(msgbuff, message_length);
-
-						if (rcvd == 0) {
-							LOG(INFO) << "IO thread " << m_tid
-									<< " handling closed connection from client "
-									<< connection->getPeerIp() << " on socket "
-									<< connection->getSocket();
-
-							// Close connection
-							connection->closeConnection();
-
-							handleNextEvent = true;
-							break;
-						}
-
-						bytes_received += rcvd;
-
-					};
-
-					if (handleNextEvent) {
-						// Continue to next event
-						continue;
-					}
-
-					if (msg_type == MqttControlPacketType::CONNECT) {
-						// Handling CONNECT message
-
-						LOG(INFO) << "IO Thread " << m_tid
-								<< " handling CONNECT message from client "
-								<< connection->getPeerIp() << " on socket "
-								<< connection->getSocket();
-
-						// Handle message and return thr CONNACK
-						ConnectControlPacket* connectControlPacket = ConnectControlPacketParser::parse(msgbuff);
-						
-						// Connack control package fixed header
-						ControlPacketFixedHeader* connack_fixed_header = new ControlPacketFixedHeader();
-						connack_fixed_header->control_packet_type = MqttControlPacketType::CONNACK;
-						connack_fixed_header->remaining_length = 2;
-						
-						// Connect acknowledge flags
-						ConnectAcknowledgeFlags* connect_ack_flags = new ConnectAcknowledgeFlags();
-						connect_ack_flags->session_present = 0;
-						
-						// Connack control package variable header
-						ConnackVariableHeader* connack_variable_header = new ConnackVariableHeader();
-						connack_variable_header->acknowledge_flags = connect_ack_flags;
-						connack_variable_header->connect_return_code = ConnectReturnCode::CONNECTION_ACCEPTED;
-						
-						// Initialize connack control package
-						ConnackControlPacket* connack_control_package = new ConnackControlPacket();
-						connack_control_package->fixed_header = connack_fixed_header;
-						connack_control_package->variable_header = connack_variable_header;
-						
-						char* connack_bytes = ConnackControlPacketProducer::serialize(connack_control_package);
-						// Send CONNACK to the client
-						connection->send(connack_bytes, sizeof connack_bytes);
-						
-					}
 
 				}
 
-				// Reset what we are watching for
-				events[i].events = EPOLLIN | EPOLLET | EPOLLONESHOT;
-				// tell epoll to re-enable this fd.
-				int result = epoll_ctl(m_epoll_fd, EPOLL_CTL_MOD,
-						connection->getSocket(), &events[i]);
-
-				if (result == -1) {
-					LOG(ERROR) << "epoll_ctl() failed";
-
-					// Close connection
-					connection->closeConnection();
-
-					continue;
-				}
+                if(connection->isClosed() == false){
+    				// Reset what we are watching for
+    				events[i].events = EPOLLIN | EPOLLET | EPOLLONESHOT;
+    				// tell epoll to re-enable this fd.
+    				int result = epoll_ctl(m_epoll_fd, EPOLL_CTL_MOD,
+    						connection->getSocket(), &events[i]);
+    
+    				if (result == -1) {
+    					LOG(ERROR) << "epoll_ctl() failed";
+    					// Close connection
+    					connection->closeConnection();
+    					continue;
+    				}
+                }
 
 			}
 
