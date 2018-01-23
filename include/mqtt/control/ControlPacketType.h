@@ -4,7 +4,13 @@
 namespace MQTT {
 namespace Control {
 
-enum MqttControlPacketType {
+enum ControlPacketType {
+    
+    /**
+     * Unknown control type
+     * Used only for internal handling, not part of specification
+     */
+    UNKNOWN = -1,
 
 	/**
 	 * Client to Server

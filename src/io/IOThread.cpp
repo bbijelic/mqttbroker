@@ -5,16 +5,21 @@
  *      Author: dev
  */
 
-#include "IOThread.hpp"
+#include "IOThread.h"
 #include "Connection.hpp"
 #include "ControlPacketType.h"
 #include "ConnectControlPacketParser.h"
 #include "ControlPacketFixedHeader.h"
+#include "ControlPacketFixedHeaderParser.h"
 #include "ConnackControlPacketProducer.h"
+#include "UnknownControlPacketTypeException.h"
+#include "MalformedRemainingLengthException.h"
+#include "ZeroBytesReceivedException.h"
 #include "easylogging++.hpp"
 
 #include <sys/epoll.h>
 #include <stdlib.h>
+#include <exception>
 
 #define MAXEVENTS 64
 
@@ -25,69 +30,60 @@ using namespace MQTT::Control;
 using namespace MQTT::Control::Connect;
 using namespace MQTT::Control::Connack;
 
-int IOThread::getMessageControlType(Connection* connection) {
-    
-    LOG(DEBUG) << "IO thread " << m_tid
-				<< " parsing control type on a connection from client "
-				<< connection->getPeerIp() << " on socket "
-				<< connection->getSocket();
-    
-	// Read only one byte, which is message control byte
-	char control_type_byte_buffer[1];
-	if (connection->receive(control_type_byte_buffer, 1) == 0) {
+void IOThread::onEpollError(Connection* connection){
+    /* An error has occured on this fd, or the socket is not
+	 ready for reading (why were we notified then?) */
+	LOG(ERROR) << "[io-thread] Handling error on epoll, closing socket "
+			<< connection->getSocket();
 
-		LOG(INFO) << "IO thread " << m_tid
-				<< " received no bytes from a client "
-				<< connection->getPeerIp() << " on socket "
-				<< connection->getSocket();
-
-		return -1;
-	}
-
-	// Shift bytes to get message type
-	return control_type_byte_buffer[0] >> 4;
+	/* Closing the descriptor will make epoll remove it
+	 from the set of descriptors which are monitored. */
+	connection->closeConnection();
 }
 
-int IOThread::getMessageLength(Connection* connection) {
+/**
+ * Handles write-ready event from the kernel.
+ * Flushes output buffer to the socket if anything in
+ */
+void IOThread::onEpollWriteReady(Connection* connection){
+    
+	LOG(ERROR) << "[io-thread] Handling output buffer FLUSH to the socket "
+			<< connection->getSocket();
+}
 
-	int multiplier = 1;
-	int length = 0;
-
-	char buffer[1];
-	do {
-		// Get next byte of the stream
-		int received = connection->receive(buffer, sizeof buffer);
-
-		if (received == 0) {
-			// Client closed connection
-
-			LOG(INFO) << "IO thread " << m_tid
-					<< " handling closed connection from client "
-					<< connection->getPeerIp() << " on socket "
-					<< connection->getSocket();
-
-			// Close connection
-			connection->closeConnection();
-
-			// Continue event loop
-			return -1;
-		}
-
-		length += (buffer[0] & 127) * multiplier;
-		multiplier *= 128;
-
-		// Malformed remaining length
-		if (multiplier > 128 * 128 * 128)
-			return -1;
-
-	} while ((buffer[0] & 128) != 0);
-
-	// Return length
-	return length;
+/**
+ * Handles read-ready event from the kernel
+ */
+void IOThread::onEpollReadReady(Connection* connection){
+    
+    LOG(INFO) << "[io-thread] Handling READ from the client "
+		      << connection->getPeerIp() << " on socket "
+		      << connection->getSocket();    
+		      		     
+    try {
+        
+        // Try to parse fixed header from incoming bytes
+        ControlPacketFixedHeader* fixed_header_ptr = ControlPacketFixedHeaderParser::parse(connection);
+        LOG(INFO) << "Fixed header -> Control Package Type = " << fixed_header_ptr->control_packet_type;
+        LOG(INFO) << "Fixed header -> Control Package Flags  " << fixed_header_ptr->control_packet_flags;
+        LOG(INFO) << "Fixed header -> Remaining Length = " << fixed_header_ptr->remaining_length;
+                
+        // Housekeeping
+        delete fixed_header_ptr;
+        
+    } catch (const exception& e){
+                
+        LOG(ERROR) << e.what();
+        
+        // Close connection
+		connection->closeConnection();
+    }
+  
 }
 
 void* IOThread::run() {
 
+    // Allocate memory for the epoll event struct array
 	struct epoll_event *events = (epoll_event *) calloc(MAXEVENTS,
 			sizeof(struct epoll_event));
 
@@ -95,78 +91,39 @@ void* IOThread::run() {
 
 		// Get epoll events
 		int num_events = epoll_wait(m_epoll_fd, events, MAXEVENTS, -1);
-
-		LOG(INFO) << "IO thread " << m_tid << " handling " << num_events << " events";
-
+		LOG(INFO) << "[io-thread] Handling " << num_events << " epoll events";
 
 		for (int i = 0; i < num_events; i++) {
 
 			// Get tcp connection from event data pointer
 			Connection* connection = (Connection*) events[i].data.ptr;
 
-			LOG(INFO) << "IO thread " << m_tid << " handles connection from socket "
-					<< connection->getSocket();
-
 			if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP)
-					|| (events[i].events & EPOLLRDHUP)
-					|| (!(events[i].events & EPOLLIN))) {
+					|| (events[i].events & EPOLLRDHUP)) {
+					    
+                // Handle epoll error
+				onEpollError(connection);
+                // Continue to the next event
+				//continue;
 
-				/* An error has occured on this fd, or the socket is not
-				 ready for reading (why were we notified then?) */
-				LOG(ERROR) << "IO thread " << m_tid
-						<< " handling error on epoll, closing socket "
-						<< connection->getSocket();
-
-				/* Closing the descriptor will make epoll remove it
-				 from the set of descriptors which are monitored. */
-				connection->closeConnection();
-
-				continue;
-
-			} else {
+            } else if(events[i].events & EPOLLOUT){
+                
+                /* Flush out buffer to the socket */
+               onEpollWriteReady(connection);
+               // Continue to the next event
+               continue;
+            
+			} else if(events[i].events & EPOLLIN){
 
 				/* We have data on the socket waiting to be read. Read and
 				 display it. We must read whatever data is available
 				 completely, as we are running in edge-triggered mode
 				 and won't get a notification again for the same
 				 data. */
-
-				LOG(INFO) << "IO thread " << m_tid << " handling data from "
-						<< connection->getPeerIp() << " on socket "
-						<< connection->getSocket();
-
-				// Get message type
-				int msg_type = getMessageControlType(connection);
-				LOG(DEBUG) << "Message type: " << msg_type;
 				
-				if(msg_type == -1){
-				    LOG(ERROR) << "IO Thread " << m_tid
-							<< " could not parse message type from client "
-							<< connection->getPeerIp() << " on socket "
-							<< connection->getSocket();
-
-					// Close connection
-					connection->closeConnection();
-
-					continue;
-				}
-
-				// Get message length
-				int message_length = getMessageLength(connection);
-				if (message_length == -1) {
-
-					LOG(ERROR) << "IO Thread " << m_tid
-							<< " could not get message length from client "
-							<< connection->getPeerIp() << " on socket "
-							<< connection->getSocket();
-
-					// Close connection
-					connection->closeConnection();
-
-					continue;
-
-				} else {
-				    
+				onEpollReadReady(connection);
+/*
+								    
 				    if(message_length > 0){
 				        
     					LOG(INFO) << "IO Thread " << m_tid << " obtaining total of "
@@ -220,6 +177,7 @@ void* IOThread::run() {
     						// Connack control package fixed header
     						ControlPacketFixedHeader* connack_fixed_header = new ControlPacketFixedHeader();
     						connack_fixed_header->control_packet_type = MqttControlPacketType::CONNACK;
+    						connact_fixed_header->control_packet_flags = 0;
     						connack_fixed_header->remaining_length = 2;
     						
     						// Connect acknowledge flags
@@ -256,7 +214,7 @@ void* IOThread::run() {
 
 
 				}
-
+*/
                 if(connection->isClosed() == false){
     				// Reset what we are watching for
     				events[i].events = EPOLLIN | EPOLLET | EPOLLONESHOT;
@@ -265,7 +223,7 @@ void* IOThread::run() {
     						connection->getSocket(), &events[i]);
     
     				if (result == -1) {
-    					LOG(ERROR) << "epoll_ctl() failed";
+    					LOG(ERROR) << "[io-thread] epoll_ctl() failed";
     					// Close connection
     					connection->closeConnection();
     					continue;

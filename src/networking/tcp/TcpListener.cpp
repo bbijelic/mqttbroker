@@ -69,7 +69,7 @@ void* TcpListener::run() {
 		// Adding connection to the queue
 		m_queue.add(connection);
 
-		LOG(INFO) << "TCP listener added connection from " << connection->getPeerIp() << " to the IO Queue";
+		LOG(INFO) << "TCP listener added connection from " << connection->getPeerIp() << " to the connection queue";
 	}
 
 }

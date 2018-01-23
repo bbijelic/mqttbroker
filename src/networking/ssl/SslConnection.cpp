@@ -40,6 +40,5 @@ ssize_t SslConnection::send(const char* buffer, size_t length) {
 }
 
 ssize_t SslConnection::receive(char* buffer, size_t length) {
-	LOG(DEBUG) << "Receaving data from SSL socket";
 	return SSL_read(m_ssl, buffer, length);;
 }

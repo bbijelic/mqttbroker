@@ -151,7 +151,7 @@ void* SslListener::run() {
 		// Adding connection to the queue
 		m_queue.add(connection);
 
-		LOG(INFO) << "SSL listener added connection from " << connection->getPeerIp() << " to the IO Queue";
+		LOG(INFO) << "SSL listener added connection from " << connection->getPeerIp() << " to the connection queue";
 	}
 }
 

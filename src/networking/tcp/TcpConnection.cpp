@@ -36,6 +36,5 @@ ssize_t TcpConnection::send(const char* buffer, size_t length) {
 }
 
 ssize_t TcpConnection::receive(char* buffer, size_t length) {
-	LOG(DEBUG) << "Receaving data from TCP socket";
 	return read(m_sd, buffer, length);
 }

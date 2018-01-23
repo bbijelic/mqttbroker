@@ -14,7 +14,10 @@ namespace Control {
 struct ControlPacketFixedHeader {
     
     // Control packet type
-    MqttControlPacketType control_packet_type;
+    ControlPacketType control_packet_type;
+    
+    // Control packet flags
+    unsigned short control_packet_flags;
     
     // Remaining length
     unsigned short remaining_length;

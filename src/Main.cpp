@@ -3,7 +3,7 @@
 #include <ConnectionHandler.hpp>
 #include <ConnectionQueue.hpp>
 #include <easylogging++.hpp>
-#include <IOThread.hpp>
+#include <IOThread.h>
 #include <ListenerManager.hpp>
 #include <sys/epoll.h>
 #include <ServerConfiguration.hpp>

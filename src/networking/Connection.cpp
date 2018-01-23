@@ -26,7 +26,7 @@ int Connection::getSocket() {
 
 void Connection::closeConnection() {
 	LOG(INFO)<< "Closing connection from " << m_peer_ip << " on socket " << m_sd;
-	if(close(m_sd)) m_is_closed = true;;
+	if(close(m_sd) == 0) m_is_closed = true;
 }
 
 bool Connection::isClosed() {
