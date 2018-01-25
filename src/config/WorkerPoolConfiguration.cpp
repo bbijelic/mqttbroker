@@ -1,24 +1,14 @@
-/*
- * WorkerPoolConfiguration.cpp
- *
- *  Created on: Dec 6, 2016
- *      Author: dev
- */
+#include "config/WorkerPoolConfiguration.h"
 
-#include "WorkerPoolConfiguration.hpp"
-#include "easylogging++.hpp"
-
-using namespace Configuration;
-
-WorkerPoolConfiguration::~WorkerPoolConfiguration(){
-	LOG(DEBUG) << "Destroying IO worker pool configuration instance";
+Broker::Config::WorkerPoolConfiguration::~WorkerPoolConfiguration(){
+	
 }
 
-int WorkerPoolConfiguration::getMinPoolSize(){
+int Broker::Config::WorkerPoolConfiguration::getMinPoolSize(){
 	return m_min_size;
 }
 
-int WorkerPoolConfiguration::getMaxPoolSize(){
+int Broker::Config::WorkerPoolConfiguration::getMaxPoolSize(){
 	return m_max_size;
 }
 
