@@ -4,72 +4,73 @@
 #include <string>
 
 namespace Broker {
-namespace Net {
+    namespace Net {
 
-/**
- * Connection interface
- */
-class Connection {
-protected:
+        /**
+         * Connection interface
+         */
+        class Connection {
+        protected:
 
-	/**
-	 * Socket descriptor
-	 */
-	int m_sd;
+            /**
+             * Socket descriptor
+             */
+            int m_sd;
 
-	/**
-	 * Peer IP address
-	 */
-	std::string m_peer_ip;
+            /**
+             * Peer IP address
+             */
+            std::string m_peer_ip;
 
-	/**
-	 * Peer port
-	 */
-	int m_peer_port;
-	
-	/**
-	 * Is connection closed
-	 */
-	bool m_is_closed = false;
+            /**
+             * Peer port
+             */
+            int m_peer_port;
 
-public:
-	/**
-	 * Returns peer ip address
-	 */
-	std::string getPeerIp();
+            /**
+             * Is connection closed
+             */
+            bool m_is_closed = false;
 
-	/**
-	 * Returns peer port
-	 */
-	int getPeerPort();
+        public:
+            /**
+             * Returns peer ip address
+             */
+            std::string getPeerIp();
 
-	/**
-	 * Returns socket file descriptor
-	 */
-	int getSocket();
+            /**
+             * Returns peer port
+             */
+            int getPeerPort();
 
-	/**
-	 * Sends via socket
-	 */
-	virtual ssize_t send(const char* buffer, size_t length) =0;
+            /**
+             * Returns socket file descriptor
+             */
+            int getSocket();
 
-	/**
-	 * Receive from the socket
-	 */
-	virtual ssize_t receive(char* buffer, size_t length) =0;
+            /**
+             * Sends via socket
+             */
+            virtual ssize_t send(const char* buffer, size_t length) = 0;
 
-	/**
-	 * Closes connection
-	 */
-	void closeConnection();
-	
-	/**
-	 * Is connection closed
-	 */
-	bool isClosed();
+            /**
+             * Receive from the socket
+             */
+            virtual ssize_t receive(char* buffer, size_t length) = 0;
 
-};
+            /**
+             * Closes connection
+             */
+            void closeConnection();
 
-}}
+            /**
+             * Is connection closed
+             */
+            bool isClosed();
+
+        };
+
+    }
+}
 
 #endif

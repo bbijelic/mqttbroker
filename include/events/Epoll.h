@@ -1,7 +1,6 @@
 #ifndef EVENTS_EPOLL_H
 #define EVENTS_EPOLL_H
 
-#include <sys/epoll.h>
 #include <string>
 
 namespace Broker {
@@ -41,6 +40,8 @@ public:
 	 * Returns epoll instance name
 	 */
 	std::string getName();
+        
+        void addDescriptor(int, unsigned int);
 };
 
 }}

@@ -1,35 +1,49 @@
-#ifndef NET_TCP_TCPLISTENERMANAGER_H
-#define NET_TCP_TCPLISTENERMANAGER_H
+#ifndef NET_TCP_TCPCONNECTOR_H
+#define NET_TCP_TCPCONNECTOR_H
 
-#include "../Connector.h"
+#include "events/Epoll.h"
+
+#include <string>
 
 namespace Broker {
-namespace Net {
-namespace TCP {
+    namespace Net {
+        namespace TCP {
 
-/**
- * TCP listener manager
- */
-class TcpListenerManager : public Connector {
-private:
+            /**
+             * TCP Connector
+             */
+            class TcpConnector {
+            private:
 
-    
+                // Port number
+                int m_port;
 
-public:
+                // Binding address
+                std::string m_bind_address;
 
-    /**
-	 * Constructor
-	 */
-	TcpListenerManager(int port, string bind, Epoll*) :
-			Connector(port, bind, queue) {};
-    
-    /**
-	 * Destructor
-	 */
-	~TcpListenerManager();
-    
-};
+                // Socket descriptor
+                int m_socket_descriptor;
 
-}}}
+                // Socket epoll instance
+                Broker::Events::Epoll* m_socket_epoll;
+
+
+            public:
+
+                /**
+                 * Constructor
+                 */
+                TcpConnector(int, std::string, Broker::Events::Epoll*);
+
+                /**
+                 * Destructor
+                 */
+                ~TcpConnector();
+
+            };
+
+        }
+    }
+}
 
 #endif
