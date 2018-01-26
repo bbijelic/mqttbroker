@@ -1,4 +1,5 @@
 #include "net/tcp/TcpConnector.h"
+#include "net/ConnectionAcceptorThread.h"
 #include "net/ConnectorException.h"
 #include "config/ServerConfiguration.h"
 #include "config/ConfigurationException.h"
@@ -9,6 +10,7 @@
 #include <csignal>
 #include <cstdlib>
 #include <string>
+#include <memory>
 
 INITIALIZE_EASYLOGGINGPP
 
@@ -70,30 +72,46 @@ int main(int argc, char *argv[]) {
     registerShutdownHandler();
 
     // Load configuration
-    Broker::Config::ServerConfiguration* server_config = loadConfiguration("config/broker.cfg");
-    LOG(INFO) << "Starting broker node " << server_config->getNodeName();
+    std::unique_ptr<Broker::Config::ServerConfiguration> server_config_ptr(
+            loadConfiguration("config/broker.cfg"));
+    LOG(INFO) << "Starting broker node " << server_config_ptr->getNodeName();
 
-    // Initialize epoll
-    Broker::Events::Epoll* socket_epoll = new Broker::Events::Epoll("socket-epoll");
+    // Initialize epoll shared pointer for socket and for connection events
+    std::shared_ptr<Broker::Events::Epoll> socket_epoll_ptr(
+            new Broker::Events::Epoll("socket-epoll"));
 
-    // Initialize TCP connector
-    Broker::Net::TCP::TcpConnector* tcp_connector = NULL;
+    // Initialize epoll shared pointer for incomming connection events
+    std::shared_ptr<Broker::Events::Epoll> conn_epoll_ptr(
+            new Broker::Events::Epoll("connection-epoll"));
 
     try {
-        // Initialize TCP connector
-        tcp_connector = new Broker::Net::TCP::TcpConnector(1883, std::string("0.0.0.0"), socket_epoll);
+
+        // Initialize TCP connector unique pointer
+        std::unique_ptr<Broker::Net::TCP::TcpConnector> tcp_connector_ptr(
+                new Broker::Net::TCP::TcpConnector(
+                1883, std::string("0.0.0.0"), socket_epoll_ptr));
+
+        // Start connector
+        // Creates socket, binds on interface and starts to listen
+        tcp_connector_ptr->start();
+
+        // Initialize connection acceptor thread unique pointer
+        std::unique_ptr<Broker::Net::ConnectionAcceptorThread> conn_acceptor_ptr(
+                new Broker::Net::ConnectionAcceptorThread(
+                socket_epoll_ptr, conn_epoll_ptr));
+        
+        // Start the thread
+        conn_acceptor_ptr->start();
+        // Join the thread
+        conn_acceptor_ptr->join();
+
+        // Stop the TCP connector
+        tcp_connector_ptr->stop();
 
     } catch (Broker::Net::ConnectorException &conne) {
         LOG(ERROR) << "TCP connector exception: " << conne.what();
     }
 
-    // Delete tcp connector
-    if (tcp_connector) delete tcp_connector;
-
-    // Delete socket epoll
-    delete socket_epoll;
-
     return 0;
-
 }
 

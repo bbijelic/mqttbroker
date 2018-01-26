@@ -20,7 +20,7 @@ Broker::Events::Epoll::Epoll(std::string epoll_name) {
 
 Broker::Events::Epoll::~Epoll() {
     if (m_epoll_fd != -1) {
-        LOG(DEBUG) << "Closing epoll file descriptor " << m_epoll_fd;
+        LOG(DEBUG) << "Closing epoll " << m_epoll_name;
         close(m_epoll_fd);
     }
 }

@@ -4,6 +4,7 @@
 #include "events/Epoll.h"
 
 #include <string>
+#include <memory>
 
 namespace Broker {
     namespace Net {
@@ -23,22 +24,29 @@ namespace Broker {
 
                 // Socket descriptor
                 int m_socket_descriptor;
-
-                // Socket epoll instance
-                Broker::Events::Epoll* m_socket_epoll;
-
+                
+                // Epoll file descriptor
+                std::shared_ptr<Broker::Events::Epoll> m_epoll_fd;
+                
+                /* Is connector running */
+                /* State is changed within start and stop functions */
+                bool m_is_running = false;
 
             public:
 
                 /**
                  * Constructor
                  */
-                TcpConnector(int, std::string, Broker::Events::Epoll*);
+                TcpConnector(int, std::string, const std::shared_ptr<Broker::Events::Epoll>);
 
                 /**
                  * Destructor
                  */
                 ~TcpConnector();
+                
+                void start();
+                
+                void stop();
 
             };
 

@@ -4,46 +4,29 @@
 #include <string>
 
 namespace Broker {
-namespace Events {
+    namespace Events {
 
-class Epoll {
-private:
+        class Epoll {
+        private:
 
-	/**
-	 * Epoll file descriptor
-	 */
-	int m_epoll_fd;   
-	
-	/**
-	 * Epoll instance name
-	 */
-	std::string m_epoll_name;
-    
-public:
+            int m_epoll_fd;
 
-	/**
-	 * Constructor
-	 */
-	Epoll(std::string);
+           
+            std::string m_epoll_name;
 
-	/**
-	 * Destructor
-	 */
-	~Epoll();
+        public:
 
-	/**
-	 * Returns epoll file descriptor
-	 */
-	const int getDescriptor();    
-	
-	/**
-	 * Returns epoll instance name
-	 */
-	std::string getName();
-        
-        void addDescriptor(int, unsigned int);
-};
+            Epoll(std::string);
 
-}}
+            ~Epoll();
+
+            const int getDescriptor();
+
+            std::string getName();
+
+            void addDescriptor(int, unsigned int);
+        };
+    }
+}
 
 #endif

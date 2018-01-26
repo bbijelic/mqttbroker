@@ -36,13 +36,23 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <string>
+#include <memory>
 
-Broker::Net::TCP::TcpConnector::TcpConnector(int port, std::string bind_address, Broker::Events::Epoll* socket_epoll) {
+Broker::Net::TCP::TcpConnector::TcpConnector(
+        int port,
+        std::string bind_address,
+        const std::shared_ptr<Broker::Events::Epoll> socket_epoll) {
 
     m_bind_address = bind_address;
     m_port = port;
-    m_socket_epoll = socket_epoll;
-    
+    m_epoll_fd = socket_epoll;
+}
+
+Broker::Net::TCP::TcpConnector::~TcpConnector() {
+    if(m_is_running) stop();
+}
+
+void Broker::Net::TCP::TcpConnector::start() {
     // Create a TCP stream non-blocking socket
     m_socket_descriptor = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
     if (m_socket_descriptor == -1) {
@@ -77,21 +87,27 @@ Broker::Net::TCP::TcpConnector::TcpConnector(int port, std::string bind_address,
     }
 
     LOG(DEBUG) << "TCP connector listening on port " << m_port;
-    
+
     try {
-    
+
         // Retister socket to the epoll instance
         // Interested only in read ready event, edge-triggered, multithreaded
-        m_socket_epoll->addDescriptor(m_socket_descriptor, EPOLLIN | EPOLLET | EPOLLONESHOT);
-   
-    } catch (Broker::Events::EpollException &ee){
+        m_epoll_fd->addDescriptor(m_socket_descriptor, EPOLLIN | EPOLLET | EPOLLONESHOT);
+
+    } catch (Broker::Events::EpollException &ee) {
         throw Broker::Net::ConnectorException(ee.what());
     }
+    
+    m_is_running = true;
 }
 
-Broker::Net::TCP::TcpConnector::~TcpConnector() {
-    LOG(DEBUG) << "Closing TCP connector socket";
-    if (m_socket_descriptor) {
-        close(m_socket_descriptor);
+void Broker::Net::TCP::TcpConnector::stop(){
+    LOG(DEBUG) << "Stopping TCP connector on port " << m_port;
+    if(m_socket_descriptor) {
+       if(close(m_socket_descriptor) == -1) {
+           throw Broker::Net::ConnectorException("Failed to close the socket");
+       }
     }
+    
+    m_is_running = false;
 }
