@@ -33,12 +33,30 @@ std::string Broker::Events::Epoll::getName() {
     return m_epoll_name;
 }
 
+void Broker::Events::Epoll::setMaxEvents(unsigned int max_events){
+    m_max_events = max_events;
+}
+
+const unsigned int Broker::Events::Epoll::getMaxEvents(){
+    return m_max_events;
+}
+
 void Broker::Events::Epoll::addDescriptor(int file_descriptor, unsigned int events) {
     epoll_event event;
     event.events = events;
     event.data.fd = file_descriptor;
     if (epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, file_descriptor, &event) == -1) {
-        throw Broker::Events::EpollException("Failed to add file descriptor to the epoll");
+        throw Broker::Events::EpollException("Failed to add file descriptor to the epoll instance '" + m_epoll_name + "'");
     }
-    LOG(DEBUG) << "Added file descriptor to epoll interest list " << file_descriptor;
+    LOG(DEBUG) << "Added file descriptor to epoll interest list '" << m_epoll_name << "': " << file_descriptor;
+}
+
+void Broker::Events::Epoll::modify(int descriptor, unsigned int events) {
+    epoll_event event;
+    event.events = events;
+    event.data.fd = descriptor;
+    if (epoll_ctl(m_epoll_fd, EPOLL_CTL_MOD, descriptor, &event) == -1) {
+        throw Broker::Events::EpollException("Failed to modify descriptor on the epoll instance '" + m_epoll_name + "'" );
+    }
+    LOG(DEBUG) << "Descriptor successfully modified on the epoll '" << m_epoll_name << "': " << descriptor;
 }

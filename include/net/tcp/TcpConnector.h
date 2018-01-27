@@ -26,7 +26,7 @@ namespace Broker {
                 int m_socket_descriptor;
                 
                 // Epoll file descriptor
-                std::shared_ptr<Broker::Events::Epoll> m_epoll_fd;
+                std::shared_ptr<Broker::Events::Epoll> m_epoll;
                 
                 /* Is connector running */
                 /* State is changed within start and stop functions */

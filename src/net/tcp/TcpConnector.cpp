@@ -45,7 +45,7 @@ Broker::Net::TCP::TcpConnector::TcpConnector(
 
     m_bind_address = bind_address;
     m_port = port;
-    m_epoll_fd = socket_epoll;
+    m_epoll = socket_epoll;
 }
 
 Broker::Net::TCP::TcpConnector::~TcpConnector() {
@@ -92,7 +92,7 @@ void Broker::Net::TCP::TcpConnector::start() {
 
         // Retister socket to the epoll instance
         // Interested only in read ready event, edge-triggered, multithreaded
-        m_epoll_fd->addDescriptor(m_socket_descriptor, EPOLLIN | EPOLLET | EPOLLONESHOT);
+        m_epoll->addDescriptor(m_socket_descriptor, EPOLLIN | EPOLLET | EPOLLONESHOT);
 
     } catch (Broker::Events::EpollException &ee) {
         throw Broker::Net::ConnectorException(ee.what());

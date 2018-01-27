@@ -96,14 +96,29 @@ int main(int argc, char *argv[]) {
         tcp_connector_ptr->start();
 
         // Initialize connection acceptor thread unique pointer
-        std::unique_ptr<Broker::Net::ConnectionAcceptorThread> conn_acceptor_ptr(
+        std::unique_ptr<Broker::Net::ConnectionAcceptorThread> conn_acceptor_ptr_1(
                 new Broker::Net::ConnectionAcceptorThread(
                 socket_epoll_ptr, conn_epoll_ptr));
         
         // Start the thread
-        conn_acceptor_ptr->start();
-        // Join the thread
-        conn_acceptor_ptr->join();
+        conn_acceptor_ptr_1->start();
+        
+        std::unique_ptr<Broker::Net::ConnectionAcceptorThread> conn_acceptor_ptr_2(
+                new Broker::Net::ConnectionAcceptorThread(
+                socket_epoll_ptr, conn_epoll_ptr));
+        // Start the thread
+        conn_acceptor_ptr_2->start();
+        
+        std::unique_ptr<Broker::Net::ConnectionAcceptorThread> conn_acceptor_ptr_3(
+                new Broker::Net::ConnectionAcceptorThread(
+                socket_epoll_ptr, conn_epoll_ptr));
+        // Start the thread
+        conn_acceptor_ptr_3->start();
+        
+        // Join the acceptor threads
+        conn_acceptor_ptr_1->join();
+        conn_acceptor_ptr_2->join();
+        conn_acceptor_ptr_3->join();
 
         // Stop the TCP connector
         tcp_connector_ptr->stop();

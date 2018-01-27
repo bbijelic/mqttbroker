@@ -44,18 +44,18 @@ namespace Broker {
         private:
 
             /* Epoll shared pointer of socket epoll */
-            const std::shared_ptr<Broker::Events::Epoll>& m_socket_epoll_ptr;
+            const std::shared_ptr<Broker::Events::Epoll>& m_socket_epoll;
 
             /* Epoll shared pointer of connection epoll */
-            const std::shared_ptr<Broker::Events::Epoll>& m_conn_epoll_ptr;
+            const std::shared_ptr<Broker::Events::Epoll>& m_conn_epoll;
 
         public:
 
             /* Constructor */
             ConnectionAcceptorThread(
-                    const std::shared_ptr<Broker::Events::Epoll>& socket_epoll_ptr,
-                    const std::shared_ptr<Broker::Events::Epoll>& conn_epoll_ptr)
-            : m_socket_epoll_ptr(socket_epoll_ptr), m_conn_epoll_ptr(conn_epoll_ptr) {};
+                    const std::shared_ptr<Broker::Events::Epoll>& socket_epoll,
+                    const std::shared_ptr<Broker::Events::Epoll>& conn_epoll)
+            : m_socket_epoll(socket_epoll), m_conn_epoll(conn_epoll) {};
 
             /* Destructor */
             ~ConnectionAcceptorThread();
