@@ -1,6 +1,8 @@
 #ifndef NETWORKING_CONNECTION_H
 #define NETWORKING_CONNECTION_H
 
+#include "sys/Descriptor.h"
+
 #include <string>
 
 namespace Broker {
@@ -9,13 +11,8 @@ namespace Broker {
         /**
          * Connection interface
          */
-        class Connection {
+        class Connection : public Broker::SYS::Descriptor {
         protected:
-
-            /**
-             * Socket descriptor
-             */
-            int m_sd;
 
             /**
              * Peer IP address
@@ -33,6 +30,7 @@ namespace Broker {
             bool m_is_closed = false;
 
         public:
+                       
             /**
              * Returns peer ip address
              */
@@ -42,11 +40,6 @@ namespace Broker {
              * Returns peer port
              */
             int getPeerPort();
-
-            /**
-             * Returns socket file descriptor
-             */
-            int getSocket();
 
             /**
              * Sends via socket

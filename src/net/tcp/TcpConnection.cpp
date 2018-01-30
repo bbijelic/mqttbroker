@@ -2,19 +2,16 @@
 #include <netinet/in.h>
 #include <stddef.h>
 #include <iostream>
+#include <string>
 
 #include "logging/easylogging++.h"
 #include "net/tcp/TcpConnection.h"
 
-Broker::Net::TCP::TcpConnection::TcpConnection(int socketd, struct sockaddr_in* address){
+Broker::Net::TCP::TcpConnection::TcpConnection(int socketd, std::string ip, int remote_port){
 
-	this->m_sd = socketd;
-
-	char ip[50];
-	inet_ntop(PF_INET, (struct in_addr*) &(address->sin_addr.s_addr), ip,
-			sizeof(ip) - 1);
+	this->m_descriptor = socketd;
 	m_peer_ip = ip;
-	m_peer_port = ntohs(address->sin_port);
+	m_peer_port = remote_port;
 }
 
 Broker::Net::TCP::TcpConnection::~TcpConnection() {
@@ -22,9 +19,9 @@ Broker::Net::TCP::TcpConnection::~TcpConnection() {
 }
 
 ssize_t Broker::Net::TCP::TcpConnection::send(const char* buffer, size_t length) {
-	return write(m_sd, buffer, length);
+	return write(m_descriptor, buffer, length);
 }
 
 ssize_t Broker::Net::TCP::TcpConnection::receive(char* buffer, size_t length) {
-	return read(m_sd, buffer, length);
+	return read(m_descriptor, buffer, length);
 }

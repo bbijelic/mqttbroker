@@ -1,16 +1,16 @@
 #ifndef EVENTS_EPOLL_H
 #define EVENTS_EPOLL_H
 
+#include "sys/Descriptor.h"
+
+#include <sys/epoll.h>
 #include <string>
 
 namespace Broker {
     namespace Events {
 
-        class Epoll {
+        class Epoll : public Broker::SYS::Descriptor {
         private:
-
-            /* Epoll file descriptor */
-            int m_epoll_fd;
 
             /* Epoll instance name */
             std::string m_epoll_name;
@@ -28,12 +28,6 @@ namespace Broker {
 
             /* Destructor */
             ~Epoll();
-
-            /**
-             * Returns epoll file descriptor
-             * @return the epoll file descriptor
-             */
-            const int getDescriptor();
             
             /**
              * Sets the max number of events for the epoll_wait
@@ -55,17 +49,23 @@ namespace Broker {
 
             /**
              * Adds file or socket descriptor to the interest list of epoll
-             * @param the socket or file descriptor
              * @param the events which are of interest for the given descriptor
+             * @param the pointer to the event data
              */
-            void addDescriptor(int, unsigned int);
-            
+            void add(unsigned int, Broker::SYS::Descriptor*);
+                        
             /**
              * Modifies file or socket descriptor on the interest list of epoll
              * @param the socket or file descriptor
-             * @param the events which are of interest for the given descriptor
+             * @param the event
              */
-            void modify(int, unsigned int);
+            void modify(int, epoll_event&);
+            
+            /**
+             * Removes file or socket descriptor from the interes list of epoll
+             * @param  the socket or file descriptor
+             */
+            void remove(int);
         };
     }
 }

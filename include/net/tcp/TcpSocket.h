@@ -23,51 +23,36 @@
  */
 
 /* 
- * File:   ConnectionAcceptorThread.h
+ * File:   TcpSocket.h
  * Author: bbijelic
  *
- * Created on January 26, 2018, 10:03 PM
+ * Created on January 30, 2018, 6:28 PM
  */
 
-#ifndef NET_CONNECTIONACCEPTORTHREAD_H
-#define NET_CONNECTIONACCEPTORTHREAD_H
+#ifndef NET_TCP_TCPSOCKET_H
+#define NET_TCP_TCPSOCKET_H
 
-#include "../concurrent/Thread.h"
-#include "../events/Epoll.h"
-
-#include <memory>
+#include "sys/Descriptor.h"
 
 namespace Broker {
     namespace Net {
-
-        class ConnectionAcceptorThread : public Broker::Concurrent::Thread {
-        private:
-
-            /* Epoll shared pointer of socket epoll */
-            const std::shared_ptr<Broker::Events::Epoll>& m_socket_epoll;
-
-            /* Epoll shared pointer of connection epoll */
-            const std::shared_ptr<Broker::Events::Epoll>& m_conn_epoll;
+        namespace TCP {
+        
+            class TcpSocket : public Broker::SYS::Descriptor {
+                                
+            public:
+                
+                /* Constructor */
+                TcpSocket(const int socketd_d) : Broker::SYS::Descriptor(socketd_d) {};
+                
+                /* Destructor */
+                ~TcpSocket();
+                                
+            };
             
-            void onSocketError();
-
-        public:
-
-            /* Constructor */
-            ConnectionAcceptorThread(
-                    const std::shared_ptr<Broker::Events::Epoll>& socket_epoll,
-                    const std::shared_ptr<Broker::Events::Epoll>& conn_epoll)
-            : m_socket_epoll(socket_epoll), m_conn_epoll(conn_epoll) {};
-
-            /* Destructor */
-            ~ConnectionAcceptorThread();
-
-            /* Run function */
-            void* run();
-
-        };
+        }
     }
 }
 
-#endif
+#endif /* NET_TCP_TCPSOCKET_H */
 

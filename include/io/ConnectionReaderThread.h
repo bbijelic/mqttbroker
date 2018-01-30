@@ -23,49 +23,46 @@
  */
 
 /* 
- * File:   ConnectionAcceptorThread.h
+ * File:   ConnectionReaderThread.h
  * Author: bbijelic
  *
- * Created on January 26, 2018, 10:03 PM
+ * Created on January 28, 2018, 1:58 PM
  */
 
-#ifndef NET_CONNECTIONACCEPTORTHREAD_H
-#define NET_CONNECTIONACCEPTORTHREAD_H
+#ifndef IO_CONNECTIONREADERTHREAD_H
+#define IO_CONNECTIONREADERTHREAD_H
 
 #include "../concurrent/Thread.h"
 #include "../events/Epoll.h"
 
+#include <string>
 #include <memory>
 
 namespace Broker {
-    namespace Net {
+    namespace IO {
 
-        class ConnectionAcceptorThread : public Broker::Concurrent::Thread {
+        /* Connection reader thread */
+        class ConnectionReaderThread : public Broker::Concurrent::Thread {
         private:
 
-            /* Epoll shared pointer of socket epoll */
-            const std::shared_ptr<Broker::Events::Epoll>& m_socket_epoll;
-
-            /* Epoll shared pointer of connection epoll */
+            /* Connection epoll instance
+             * All client sockets are registered to this epoll instance */
             const std::shared_ptr<Broker::Events::Epoll>& m_conn_epoll;
-            
-            void onSocketError();
 
         public:
 
             /* Constructor */
-            ConnectionAcceptorThread(
-                    const std::shared_ptr<Broker::Events::Epoll>& socket_epoll,
+            ConnectionReaderThread(
                     const std::shared_ptr<Broker::Events::Epoll>& conn_epoll)
-            : m_socket_epoll(socket_epoll), m_conn_epoll(conn_epoll) {};
+            : m_conn_epoll(conn_epoll) {};
 
             /* Destructor */
-            ~ConnectionAcceptorThread();
+            ~ConnectionReaderThread();
 
-            /* Run function */
+            /* Run */
             void* run();
-
         };
+
     }
 }
 

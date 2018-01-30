@@ -2,6 +2,7 @@
 #define NET_TCP_TCPCONNECTOR_H
 
 #include "events/Epoll.h"
+#include "TcpSocket.h"
 
 #include <string>
 #include <memory>
@@ -23,7 +24,7 @@ namespace Broker {
                 std::string m_bind_address;
 
                 // Socket descriptor
-                int m_socket_descriptor;
+                TcpSocket* m_socket;
                 
                 // Epoll file descriptor
                 std::shared_ptr<Broker::Events::Epoll> m_epoll;

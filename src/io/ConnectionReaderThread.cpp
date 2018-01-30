@@ -22,46 +22,52 @@
  * THE SOFTWARE.
  */
 
-#include "sys/Descriptor.h"
-#include "net/tcp/TcpConnection.h"
-#include "net/ConnectionAcceptorThread.h"
-#include "events/Epoll.h"
+#include "io/ConnectionReaderThread.h"
 #include "logging/easylogging++.h"
+#include "events/Epoll.h"
 #include "events/EpollException.h"
-#include "net/tcp/TcpSocket.h"
+#include "net/Connection.h"
 
 #include <memory>
+#include <string>
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 
-Broker::Net::ConnectionAcceptorThread::~ConnectionAcceptorThread() {
-    LOG(INFO) << "Destructing connection acceptor thread";
+/**
+ * Destructor
+ */
+Broker::IO::ConnectionReaderThread::~ConnectionReaderThread() {
+    LOG(INFO) << "Destructing IO thread";
 }
 
-void* Broker::Net::ConnectionAcceptorThread::run() {
+/**
+ * Thread run method
+ * @return 
+ */
+void* Broker::IO::ConnectionReaderThread::run() {
 
     /* Set the thread name */
-    std::string thread_name = std::string("acceptor-thread-");
+    std::string thread_name = std::string("io-thread-");
     thread_name += std::to_string(m_tid);
     el::Helpers::setThreadName(thread_name.c_str());
 
-    LOG(DEBUG) << "Started connection acceptor thread " << m_tid;
+    LOG(DEBUG) << "Started IO thread '" << thread_name << "'";
 
     // Allocate memory for the epoll event struct array
     struct epoll_event *events = (epoll_event *) calloc(
-            m_socket_epoll->getMaxEvents(), sizeof (struct epoll_event));
+            m_conn_epoll->getMaxEvents(), sizeof (struct epoll_event));
 
     bool gracefully_stop = false;
     while (!gracefully_stop) {
 
         // Get epoll events
         int epoll_wait_result = epoll_wait(
-                m_socket_epoll->getDescriptor(),
+                m_conn_epoll->getDescriptor(),
                 events,
-                m_socket_epoll->getMaxEvents(), -1);
+                m_conn_epoll->getMaxEvents(), -1);
 
         if (epoll_wait_result == -1) {
 
@@ -85,11 +91,12 @@ void* Broker::Net::ConnectionAcceptorThread::run() {
             break;
         }
 
-        LOG(INFO) << "Epoll '" <<  m_socket_epoll->getName() << "' provided " << epoll_wait_result << " events to handle";
+        LOG(INFO) << "Epoll '" <<  m_conn_epoll->getName() << "' provided " << epoll_wait_result << " events to handle";
         for (int i = 0; i < epoll_wait_result; i++) {
-            
-            Broker::Net::TCP::TcpSocket* socket 
-                    = (Broker::Net::TCP::TcpSocket*) events[i].data.ptr;
+
+            /* Cast the data pointer to the connection pointer */
+            Broker::Net::Connection* connection
+                    = (Broker::Net::Connection*) events[i].data.ptr;
 
             if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP)
                     || (events[i].events & EPOLLRDHUP)) {
@@ -97,63 +104,29 @@ void* Broker::Net::ConnectionAcceptorThread::run() {
                 /* Error occurred */
                 int error = 0;
                 socklen_t errlen = sizeof (error);
-                if (getsockopt(socket->getDescriptor(), SOL_SOCKET, SO_ERROR, (void *) &error, &errlen) == 0) {
+                if (getsockopt(connection->getDescriptor(), SOL_SOCKET, SO_ERROR, (void *) &error, &errlen) == 0) {
                     LOG(DEBUG) << "Socket error: " << strerror(error);
                 }
 
+            } else if (events[i].events & EPOLLOUT) {
+
+                /* Socket read for the write */
+                LOG(DEBUG) << "Reading bytes from client " << connection->getPeerIp();
+
             } else if (events[i].events & EPOLLIN) {
 
-                /* New connection */
+                /* Socket ready for the read */
+                LOG(DEBUG) << "Writting bytes to client " << connection->getPeerIp();
 
-                struct sockaddr_in address;
-                socklen_t len = sizeof (address);
-                memset(&address, 0, len);
-
-                int accept_result = ::accept(socket->getDescriptor(), (struct sockaddr*) &address, &len);
-                if (accept_result == -1) {
-
-                    /* Error occured on accept */
-                    if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                        LOG(DEBUG) << "No pending connections waiting for accept are present in the queue";
-                    }
-
-                } else {
-
-                    try {
-                        
-                        char ip[50];
-                        inet_ntop(PF_INET, &address.sin_addr.s_addr, ip,
-			sizeof(ip) - 1);
-                        
-                        Broker::Net::TCP::TcpConnection* connection
-                            = new Broker::Net::TCP::TcpConnection(
-                                accept_result, std::string(ip), address.sin_port);
-                        
-                        connection->setDescriptor(accept_result);
-
-                        /* Add accepted connection to the connection 
-                         * epoll instance interest list */
-                        m_conn_epoll->add(
-                                EPOLLIN | EPOLLOUT | EPOLLET | EPOLLONESHOT,
-                                connection);
-
-                        LOG(INFO) << "Accepted connection from socket " << connection->getDescriptor();
-
-                    } catch (Broker::Events::EpollException &ee) {
-                        LOG(ERROR) << ee.what();
-
-                        /* Gracefully stop the thread */
-                        gracefully_stop = true;
-                    }
-                }
             }
 
             try {
 
                 /* Re-arm the socket */
-                m_socket_epoll->modify(socket->getDescriptor(), events[i]);
+                m_conn_epoll->modify(connection->getDescriptor(),
+                        events[i]);
 
-            } catch (Broker::Events::EpollException &ee) {
+            } catch (const Broker::Events::EpollException &ee) {
                 LOG(ERROR) << ee.what();
 
                 /* Gracefully stop the thread */
@@ -162,7 +135,4 @@ void* Broker::Net::ConnectionAcceptorThread::run() {
             }
         }
     }
-
-    return NULL;
 }
-

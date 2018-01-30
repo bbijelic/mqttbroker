@@ -23,47 +23,38 @@
  */
 
 /* 
- * File:   ConnectionAcceptorThread.h
+ * File:   Descriptor.h
  * Author: bbijelic
  *
- * Created on January 26, 2018, 10:03 PM
+ * Created on January 30, 2018, 6:40 PM
  */
 
-#ifndef NET_CONNECTIONACCEPTORTHREAD_H
-#define NET_CONNECTIONACCEPTORTHREAD_H
-
-#include "../concurrent/Thread.h"
-#include "../events/Epoll.h"
-
-#include <memory>
+#ifndef SYS_DESCRIPTOR_H
+#define SYS_DESCRIPTOR_H
 
 namespace Broker {
-    namespace Net {
+    namespace SYS {
 
-        class ConnectionAcceptorThread : public Broker::Concurrent::Thread {
-        private:
+        /* Descriptor class */
+        class Descriptor {
+        protected:
 
-            /* Epoll shared pointer of socket epoll */
-            const std::shared_ptr<Broker::Events::Epoll>& m_socket_epoll;
-
-            /* Epoll shared pointer of connection epoll */
-            const std::shared_ptr<Broker::Events::Epoll>& m_conn_epoll;
-            
-            void onSocketError();
+            /* Descriptor */
+            int m_descriptor;
 
         public:
 
             /* Constructor */
-            ConnectionAcceptorThread(
-                    const std::shared_ptr<Broker::Events::Epoll>& socket_epoll,
-                    const std::shared_ptr<Broker::Events::Epoll>& conn_epoll)
-            : m_socket_epoll(socket_epoll), m_conn_epoll(conn_epoll) {};
+            Descriptor() {};
+            
+            /* Constructor */
+            Descriptor(const int descriptor) : m_descriptor(descriptor) {
+            };
+            
+            void setDescriptor(const int);
 
-            /* Destructor */
-            ~ConnectionAcceptorThread();
-
-            /* Run function */
-            void* run();
+            /* Descriptor getter */
+            const int getDescriptor();
 
         };
     }

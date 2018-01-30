@@ -22,11 +22,13 @@
  * THE SOFTWARE.
  */
 
+#include "sys/Descriptor.h"
 #include "net/tcp/TcpConnector.h"
 #include "net/ConnectorException.h"
 #include "events/Epoll.h"
 #include "events/EpollException.h"
 #include "logging/easylogging++.h"
+#include "net/tcp/TcpSocket.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -49,15 +51,18 @@ Broker::Net::TCP::TcpConnector::TcpConnector(
 }
 
 Broker::Net::TCP::TcpConnector::~TcpConnector() {
-    if(m_is_running) stop();
+    if (m_is_running) stop();
 }
 
 void Broker::Net::TCP::TcpConnector::start() {
     // Create a TCP stream non-blocking socket
-    m_socket_descriptor = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
-    if (m_socket_descriptor == -1) {
+    int socket_result = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+    if (socket_result == -1) {
         throw Broker::Net::ConnectorException("Failed to open socket");
     }
+
+    /* Instance of TCP socket */
+    m_socket = new Broker::Net::TCP::TcpSocket(socket_result);
 
     LOG(DEBUG) << "TCP connector non-blocking socket created";
 
@@ -71,17 +76,17 @@ void Broker::Net::TCP::TcpConnector::start() {
     address.sin_addr.s_addr = INADDR_ANY;
 
     int optval = 1;
-    setsockopt(m_socket_descriptor, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval);
+    setsockopt(m_socket->getDescriptor(), SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval);
 
     // Bind to the interface
-    int result = bind(m_socket_descriptor, (struct sockaddr*) &address, sizeof (address));
+    int result = bind(m_socket->getDescriptor(), (struct sockaddr*) &address, sizeof (address));
     if (result != 0) {
         throw Broker::Net::ConnectorException("TCP connector bind failed");
     }
 
     LOG(DEBUG) << "TCP connector binded to the interface";
 
-    result = listen(m_socket_descriptor, 5);
+    result = listen(m_socket->getDescriptor(), 5);
     if (result != 0) {
         throw Broker::Net::ConnectorException("TCP connector listen failed");
     }
@@ -92,22 +97,23 @@ void Broker::Net::TCP::TcpConnector::start() {
 
         // Retister socket to the epoll instance
         // Interested only in read ready event, edge-triggered, multithreaded
-        m_epoll->addDescriptor(m_socket_descriptor, EPOLLIN | EPOLLET | EPOLLONESHOT);
+        m_epoll->add(EPOLLIN | EPOLLET | EPOLLONESHOT, m_socket);
 
     } catch (Broker::Events::EpollException &ee) {
         throw Broker::Net::ConnectorException(ee.what());
     }
-    
+
     m_is_running = true;
 }
 
-void Broker::Net::TCP::TcpConnector::stop(){
+void Broker::Net::TCP::TcpConnector::stop() {
     LOG(DEBUG) << "Stopping TCP connector on port " << m_port;
-    if(m_socket_descriptor) {
-       if(close(m_socket_descriptor) == -1) {
-           throw Broker::Net::ConnectorException("Failed to close the socket");
-       }
+    if (m_socket->getDescriptor()) {
+        if (close(m_socket->getDescriptor()) == -1) {
+            throw Broker::Net::ConnectorException(
+                    "Failed to close the socket: " + std::to_string(m_socket->getDescriptor()));
+        }
     }
-    
+
     m_is_running = false;
 }
