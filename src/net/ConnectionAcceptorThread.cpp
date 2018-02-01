@@ -36,6 +36,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
 
 Broker::Net::ConnectionAcceptorThread::~ConnectionAcceptorThread() {
     LOG(INFO) << "Destructing connection acceptor thread";
@@ -44,7 +45,7 @@ Broker::Net::ConnectionAcceptorThread::~ConnectionAcceptorThread() {
 void* Broker::Net::ConnectionAcceptorThread::run() {
 
     /* Set the thread name */
-    std::string thread_name = std::string("acceptor-thread-");
+    std::string thread_name = std::string(ACCEPTOR_THREAD_NAME_PREFIX);
     thread_name += std::to_string(m_tid);
     el::Helpers::setThreadName(thread_name.c_str());
 
@@ -85,10 +86,10 @@ void* Broker::Net::ConnectionAcceptorThread::run() {
             break;
         }
 
-        LOG(INFO) << "Epoll '" <<  m_socket_epoll->getName() << "' provided " << epoll_wait_result << " events to handle";
+        LOG(INFO) << "Epoll '" << m_socket_epoll->getName() << "' provided " << epoll_wait_result << " events to handle";
         for (int i = 0; i < epoll_wait_result; i++) {
-            
-            Broker::Net::TCP::TcpSocket* socket 
+
+            Broker::Net::TCP::TcpSocket* socket
                     = (Broker::Net::TCP::TcpSocket*) events[i].data.ptr;
 
             if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP)
@@ -120,21 +121,23 @@ void* Broker::Net::ConnectionAcceptorThread::run() {
                 } else {
 
                     try {
-                        
-                        char ip[50];
-                        inet_ntop(PF_INET, &address.sin_addr.s_addr, ip,
-			sizeof(ip) - 1);
-                        
+
+                        makeSocketNonblocking(accept_result);
+
+                        char ip_buffer[16];
+                        inet_ntop(PF_INET, &address.sin_addr.s_addr, ip_buffer, sizeof (ip_buffer));
+                        std::string ip_address(ip_buffer);
+
                         Broker::Net::TCP::TcpConnection* connection
-                            = new Broker::Net::TCP::TcpConnection(
-                                accept_result, std::string(ip), address.sin_port);
-                        
+                                = new Broker::Net::TCP::TcpConnection(
+                                accept_result, ip_address, address.sin_port);
+
                         connection->setDescriptor(accept_result);
 
                         /* Add accepted connection to the connection 
                          * epoll instance interest list */
                         m_conn_epoll->add(
-                                EPOLLIN | EPOLLOUT | EPOLLET | EPOLLONESHOT,
+                                EPOLLIN | EPOLLET | EPOLLONESHOT,
                                 connection);
 
                         LOG(INFO) << "Accepted connection from socket " << connection->getDescriptor();
@@ -164,5 +167,20 @@ void* Broker::Net::ConnectionAcceptorThread::run() {
     }
 
     return NULL;
+}
+
+void Broker::Net::ConnectionAcceptorThread::makeSocketNonblocking(int socketd) {
+    int flags, s;
+
+    flags = fcntl(socketd, F_GETFL, 0);
+    if (flags == -1) {
+        LOG(ERROR) << "fcntl() failed";
+    }
+
+    flags |= O_NONBLOCK;
+    s = fcntl(socketd, F_SETFL, flags);
+    if (s == -1) {
+        LOG(ERROR) << "fcntl() failed";
+    }
 }
 

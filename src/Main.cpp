@@ -23,13 +23,13 @@
  */
 
 /* 
- * File:   Main.h
+ * File:   Main.cpp
  * Author: bbijelic
  *
  * Created on January 30, 2018, 5:58 PM
  */
 
-#include "io/ConnectionReaderThread.h"
+#include "net/io/ConnectionReaderThread.h"
 #include "net/tcp/TcpConnector.h"
 #include "net/ConnectionAcceptorThread.h"
 #include "net/ConnectorException.h"
@@ -119,15 +119,11 @@ int main(int argc, char *argv[]) {
     try {
         
         /* IO thread smart pointer init */
-        std::unique_ptr<Broker::IO::ConnectionReaderThread> io_thread_ptr_1(
-            new Broker::IO::ConnectionReaderThread(conn_epoll_ptr));
-       
-        std::unique_ptr<Broker::IO::ConnectionReaderThread> io_thread_ptr_2(
-            new Broker::IO::ConnectionReaderThread(conn_epoll_ptr));
-        
+        std::unique_ptr<Broker::Net::IO::ConnectionReaderThread> io_thread_ptr_1(
+            new Broker::Net::IO::ConnectionReaderThread(conn_epoll_ptr));
+               
         /* Start IO thread */
         io_thread_ptr_1->start();
-        io_thread_ptr_2->start();
 
         // Initialize TCP connector unique pointer
         std::unique_ptr<Broker::Net::TCP::TcpConnector> tcp_connector_ptr(
@@ -145,27 +141,12 @@ int main(int argc, char *argv[]) {
         
         // Start the thread
         conn_acceptor_ptr_1->start();
-        
-        std::unique_ptr<Broker::Net::ConnectionAcceptorThread> conn_acceptor_ptr_2(
-                new Broker::Net::ConnectionAcceptorThread(
-                socket_epoll_ptr, conn_epoll_ptr));
-        // Start the thread
-        conn_acceptor_ptr_2->start();
-        
-        std::unique_ptr<Broker::Net::ConnectionAcceptorThread> conn_acceptor_ptr_3(
-                new Broker::Net::ConnectionAcceptorThread(
-                socket_epoll_ptr, conn_epoll_ptr));
-        // Start the thread
-        conn_acceptor_ptr_3->start();
-        
+                
         /* Join IO threads */
         io_thread_ptr_1->join();
-        io_thread_ptr_2->join();
         
         // Join the acceptor threads
         conn_acceptor_ptr_1->join();
-        conn_acceptor_ptr_2->join();
-        conn_acceptor_ptr_3->join();
 
         // Stop the TCP connector
         tcp_connector_ptr->stop();

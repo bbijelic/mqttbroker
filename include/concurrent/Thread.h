@@ -20,7 +20,7 @@ protected:
 	/**
 	 * Should thread gracefully stop
 	 */
-	bool m_graceful_stop;
+	bool m_graceful_stop = false;
 
 private:
 

@@ -49,6 +49,17 @@ void Broker::Events::Epoll::add(unsigned int events, Broker::SYS::Descriptor* de
     LOG(DEBUG) << "Added file descriptor to epoll interest list '" << m_epoll_name << "': " << descriptor->getDescriptor();
 }
 
+void Broker::Events::Epoll::add(unsigned int events, Broker::Net::Connection* connection) {
+    epoll_event event;
+    event.events = events;
+    event.data.ptr = connection;
+    if (epoll_ctl(m_descriptor, EPOLL_CTL_ADD, connection->getDescriptor(), &event) == -1) {
+        throw Broker::Events::EpollException(
+                "Failed to add file descriptor to the epoll instance '" + m_epoll_name + "'");
+    }
+    LOG(DEBUG) << "Added file descriptor to epoll interest list '" << m_epoll_name << "': " << connection->getDescriptor();
+}
+
 void Broker::Events::Epoll::modify(int descriptor, epoll_event& event) {
     if (epoll_ctl(m_descriptor, EPOLL_CTL_MOD, descriptor, &event) == -1) {        
         throw Broker::Events::EpollException(

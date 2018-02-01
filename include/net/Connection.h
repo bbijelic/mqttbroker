@@ -54,7 +54,7 @@ namespace Broker {
             /**
              * Closes connection
              */
-            void closeConnection();
+            void close();
 
             /**
              * Is connection closed

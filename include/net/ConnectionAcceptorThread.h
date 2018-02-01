@@ -37,6 +37,8 @@
 
 #include <memory>
 
+#define ACCEPTOR_THREAD_NAME_PREFIX "acceptor-thread-"
+
 namespace Broker {
     namespace Net {
 
@@ -50,6 +52,8 @@ namespace Broker {
             const std::shared_ptr<Broker::Events::Epoll>& m_conn_epoll;
             
             void onSocketError();
+            
+            void makeSocketNonblocking(int);
 
         public:
 

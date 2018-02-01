@@ -2,6 +2,7 @@
 #define EVENTS_EPOLL_H
 
 #include "sys/Descriptor.h"
+#include "net/Connection.h"
 
 #include <sys/epoll.h>
 #include <string>
@@ -53,6 +54,13 @@ namespace Broker {
              * @param the pointer to the event data
              */
             void add(unsigned int, Broker::SYS::Descriptor*);
+            
+            /**
+             * Adds file or socket descriptor to the interest list of epoll
+             * @param the events which are of interest for the given descriptor
+             * @param the pointer to the event data
+             */
+            void add(unsigned int, Broker::Net::Connection*);
                         
             /**
              * Modifies file or socket descriptor on the interest list of epoll

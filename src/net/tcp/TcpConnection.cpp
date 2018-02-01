@@ -9,13 +9,13 @@
 
 Broker::Net::TCP::TcpConnection::TcpConnection(int socketd, std::string ip, int remote_port){
 
-	this->m_descriptor = socketd;
+	m_descriptor = socketd;
 	m_peer_ip = ip;
 	m_peer_port = remote_port;
 }
 
 Broker::Net::TCP::TcpConnection::~TcpConnection() {
-	closeConnection();
+	close();
 }
 
 ssize_t Broker::Net::TCP::TcpConnection::send(const char* buffer, size_t length) {

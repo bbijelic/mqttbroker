@@ -29,42 +29,48 @@
  * Created on January 28, 2018, 1:58 PM
  */
 
-#ifndef IO_CONNECTIONREADERTHREAD_H
-#define IO_CONNECTIONREADERTHREAD_H
+#ifndef NET_IO_CONNECTIONREADERTHREAD_H
+#define NET_IO_CONNECTIONREADERTHREAD_H
 
-#include "../concurrent/Thread.h"
-#include "../events/Epoll.h"
+#include "../../concurrent/Thread.h"
+#include "../../events/Epoll.h"
 
 #include <string>
 #include <memory>
 
+#define IO_THREAD_NAME_PREFIX "io-thread-"
+
 namespace Broker {
-    namespace IO {
+    namespace Net {
+        namespace IO {
 
-        /* Connection reader thread */
-        class ConnectionReaderThread : public Broker::Concurrent::Thread {
-        private:
+            /* Connection reader thread */
+            class ConnectionReaderThread : public Broker::Concurrent::Thread {
+            private:
 
-            /* Connection epoll instance
-             * All client sockets are registered to this epoll instance */
-            const std::shared_ptr<Broker::Events::Epoll>& m_conn_epoll;
+                /* Connection epoll instance
+                 * All client sockets are registered to this epoll instance */
+                const std::shared_ptr<Broker::Events::Epoll>& m_conn_epoll;
 
-        public:
+            public:
 
-            /* Constructor */
-            ConnectionReaderThread(
-                    const std::shared_ptr<Broker::Events::Epoll>& conn_epoll)
-            : m_conn_epoll(conn_epoll) {};
+                /* Constructor */
+                ConnectionReaderThread(
+                        const std::shared_ptr<Broker::Events::Epoll>& conn_epoll)
+                : m_conn_epoll(conn_epoll) {
+                };
 
-            /* Destructor */
-            ~ConnectionReaderThread();
+                /* Destructor */
+                ~ConnectionReaderThread();
 
-            /* Run */
-            void* run();
-        };
+                /* Run */
+                void* run();
+            };
 
+        }
     }
 }
+
 
 #endif
 
