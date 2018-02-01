@@ -34,9 +34,9 @@ void Broker::Net::Connection::close() {
         /* Retrying failed close call is a no-no; check close() man NOTES */
 
         switch (errno) {
-            case EBADF: LOG(ERROR) << "Socket descriptor is not a valid descriptor";
-            case EINTR: LOG(ERROR) << "Close operation has ben interrupted by a signal";
-            case EIO: LOG(ERROR) << "An I/O error has occurred";
+            case EBADF: LOG(ERROR) << CLOSE_EBADF_MSG;
+            case EINTR: LOG(ERROR) << CLOSE_EINTR_MSG;
+            case EIO: LOG(ERROR) << CLOSE_EIO_MSG;
         }
 
     }

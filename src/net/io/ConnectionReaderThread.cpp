@@ -45,11 +45,11 @@ Broker::Net::IO::ConnectionReaderThread::~ConnectionReaderThread() {
 
 /**
  * Thread run method
- * @return 
  */
 void* Broker::Net::IO::ConnectionReaderThread::run() {
 
     /* Set the thread name */
+    /* Thread name has not other purpose other than logging */
     std::string thread_name = std::string(IO_THREAD_NAME_PREFIX);
     thread_name += std::to_string(m_tid);
     el::Helpers::setThreadName(thread_name.c_str());
@@ -60,6 +60,7 @@ void* Broker::Net::IO::ConnectionReaderThread::run() {
     struct epoll_event *events = (epoll_event *) calloc(
             m_conn_epoll->getMaxEvents(), sizeof (struct epoll_event));
 
+    /* Loop untile gracefully stoped */
     while (!m_graceful_stop) {
 
         // Get epoll events
@@ -73,13 +74,13 @@ void* Broker::Net::IO::ConnectionReaderThread::run() {
             /* Error occured on epoll wait call */
 
             switch (errno) {
-                case EBADF: LOG(ERROR) << "Provided epoll file descriptor is not a valid file descriptor";
-                case EFAULT: LOG(ERROR) << "The memory area pointed to by events is not accessible with write permissions";
-                case EINTR: LOG(ERROR) << "The call was interrupted by a signal handler";
-                case EINVAL: LOG(ERROR) << "Provided epoll file descriptor is not a epoll file descriptor or max events is se to be zero or less";
+                case EBADF: LOG(ERROR) << EPOLL_EBADF_MSG;
+                case EFAULT: LOG(ERROR) << EPOLL_EFAULT_MSG;
+                case EINTR: LOG(ERROR) << EPOLL_EINTR_MSG;
+                case EINVAL: LOG(ERROR) << EPOLL_EINVAL_MSG;
             }
 
-            /* Break the loop */
+            /* Break the while loop */
             break;
         }
 
@@ -122,6 +123,8 @@ void* Broker::Net::IO::ConnectionReaderThread::run() {
                         delete connection;
 
                     } else if (receive_result == -1) {
+                        
+                        /* Error has occurred on read */
 
                         if (errno == EAGAIN || errno == EWOULDBLOCK) {
 

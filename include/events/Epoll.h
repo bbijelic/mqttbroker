@@ -7,6 +7,11 @@
 #include <sys/epoll.h>
 #include <string>
 
+#define EPOLL_EBADF_MSG       "Provided epoll file descriptor is not a valid file descriptor"
+#define EPOLL_EFAULT_MSG      "The memory area pointed to by events is not accessible with write permissions"
+#define EPOLL_EINTR_MSG       "The call was interrupted by a signal handler"
+#define EPOLL_EINVAL_MSG      "Provided epoll file descriptor is not a epoll file descriptor or max events is se to be zero or less"
+
 namespace Broker {
     namespace Events {
 

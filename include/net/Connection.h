@@ -5,6 +5,10 @@
 
 #include <string>
 
+#define CLOSE_EBADF_MSG "Socket descriptor is not a valid descriptor"
+#define CLOSE_EINTR_MSG "Close operation has ben interrupted by a signal"
+#define CLOSE_EIO_MSG   "An I/O error has occurred"
+
 namespace Broker {
     namespace Net {
 
@@ -30,7 +34,7 @@ namespace Broker {
             bool m_is_closed = false;
 
         public:
-                       
+
             /**
              * Returns peer ip address
              */
