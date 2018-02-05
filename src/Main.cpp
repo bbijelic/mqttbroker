@@ -29,6 +29,7 @@
  * Created on January 30, 2018, 5:58 PM
  */
 
+#include "sys/ShutdownHandler.h"
 #include "net/io/ConnectionReaderThread.h"
 #include "net/tcp/TcpConnector.h"
 #include "net/ConnectionAcceptorThread.h"
@@ -37,81 +38,25 @@
 #include "config/ConfigurationException.h"
 #include "logging/easylogging++.h"
 #include "events/Epoll.h"
-#include "cxxopts/cxxopts.h"
 
-#include <cerrno>
-#include <csignal>
-#include <cstdlib>
 #include <string>
 #include <memory>
 
 INITIALIZE_EASYLOGGINGPP
-
-void shutdownHandler(int signum) {
-    LOG(INFO) << "Interrupt signal (" << signum << ") received.";
-    LOG(INFO) << "Handling server shutdown...";
-    exit(signum);
-}
-
-static void registerShutdownHandler() {
-    LOG(INFO) << "Registering shutdown handler";
-
-    // Register signal SIGINT and signal handler
-    // Abnormal termination of the program, such as a call to abort
-    signal(SIGABRT, shutdownHandler);
-    // An erroneous arithmetic operation, such as a divide by zero or an operation resulting in overflow.
-    signal(SIGFPE, shutdownHandler);
-    // Detection of an illegal instruction
-    signal(SIGILL, shutdownHandler);
-    // Receipt of an interactive attention signal.
-    signal(SIGINT, shutdownHandler);
-    // An invalid access to storage.
-    signal(SIGSEGV, shutdownHandler);
-    // A termination request sent to the program.
-    signal(SIGTERM, shutdownHandler);
-}
 
 /**
  * Main
  */
 int main(int argc, char* argv[]) {
 
+    /* Initialize shutdown handler */
+    std::unique_ptr<Broker::SYS::ShutdownHandler> shutdown_handler_ptr(
+            new Broker::SYS::ShutdownHandler());
+
     try {
 
-        std::string config_filepath;
-        std::string logger_config_filepath;
-
-        /* CMD line parser options */
-        cxxopts::Options options(argv[0], "MQTT 3.1.1. broker");
-        options.add_options()
-                ("c, conf", "Config file path", cxxopts::value<std::string>(config_filepath)->default_value("config/broker.cfg"))
-                ("l, lconf", "Logger config file path", cxxopts::value<std::string>(logger_config_filepath)->default_value("config/logger.cfg"))
-                ("v, version", "Version", cxxopts::value<std::string>()->implicit_value("1.0"))
-                ("h, help", "Help");
-
-        /* Parse command line arguments */
-        auto result = options.parse(argc, argv);
-
-        if (result.count("h")) {
-            std::cout << options.help() << std::endl;
-            return 0;
-        }
-
-        if (result.count("v")) {
-            std::cout << result["v"].as<std::string>() << std::endl;
-            return 0;
-        }
-
-        if (result.count("c")) {
-            config_filepath = result["c"].as<std::string>();
-        }
-
-        if (result.count("l")) {
-            logger_config_filepath = result["l"].as<std::string>();
-        }
-
-        // Registering shutdown handler
-        registerShutdownHandler();
+        std::string config_filepath = "config/broker.cfg";
+        std::string logger_config_filepath = "config/logger.cfg";
 
         // Load configuration from file
         el::Configurations conf(logger_config_filepath.c_str());
@@ -174,10 +119,6 @@ int main(int argc, char* argv[]) {
 
     } catch (const Broker::Config::ConfigurationException& ce) {
         LOG(ERROR) << "Configuration exception: " << ce.what();
-        abort();
-
-    } catch (const cxxopts::OptionException& oe) {
-        std::cout << oe.what() << std::endl;
         abort();
     }
 

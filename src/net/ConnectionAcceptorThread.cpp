@@ -49,7 +49,7 @@ void* Broker::Net::ConnectionAcceptorThread::run() {
     thread_name += std::to_string(m_tid);
     el::Helpers::setThreadName(thread_name.c_str());
 
-    LOG(DEBUG) << "Started connection acceptor thread " << m_tid;
+    LOG(DEBUG) << "Started connection acceptor thread '" << thread_name << "'";
 
     // Allocate memory for the epoll event struct array
     struct epoll_event *events = (epoll_event *) calloc(
