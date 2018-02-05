@@ -68,27 +68,20 @@ void* Broker::Net::ConnectionAcceptorThread::run() {
 
             /* Error occured on epoll wait call */
 
-            if (errno == EBADF) {
-                LOG(ERROR) << "Provided epoll file descriptor is not a valid file descriptor";
-
-            } else if (errno == EFAULT) {
-                LOG(ERROR) << "The memory area pointed to by events is not accessible with write permissions";
-
-            } else if (errno == EINTR) {
-                LOG(ERROR) << "The call was interrupted by a signal handler";
-
-            } else if (errno == EINVAL) {
-                LOG(ERROR) << "Provided epoll file descriptor is not a epoll file descriptor or max events is se to be zero or less";
+            switch (errno) {
+                case EBADF: LOG(ERROR) << EPOLL_EBADF_MSG;
+                case EFAULT: LOG(ERROR) << EPOLL_EFAULT_MSG;
+                case EINTR: LOG(ERROR) << EPOLL_EINTR_MSG;
+                case EINVAL: LOG(ERROR) << EPOLL_EINVAL_MSG;
             }
 
-            /* Gracefully stop the thread */
-            gracefully_stop = true;
             break;
         }
 
         LOG(INFO) << "Epoll '" << m_socket_epoll->getName() << "' provided " << epoll_wait_result << " events to handle";
         for (int i = 0; i < epoll_wait_result; i++) {
 
+            /* Cast event data pointer to TcpSocket pointer */
             Broker::Net::TCP::TcpSocket* socket
                     = (Broker::Net::TCP::TcpSocket*) events[i].data.ptr;
 

@@ -37,6 +37,7 @@
 #include "config/ConfigurationException.h"
 #include "logging/easylogging++.h"
 #include "events/Epoll.h"
+#include "cxxopts/cxxopts.h"
 
 #include <cerrno>
 #include <csignal>
@@ -70,58 +71,74 @@ static void registerShutdownHandler() {
     signal(SIGTERM, shutdownHandler);
 }
 
-static Broker::Config::ServerConfiguration* loadConfiguration(std::string config_filepath) {
-
-    // Initialize configuration
-    Broker::Config::ServerConfiguration* server_config = NULL;
-
-    try {
-
-        // Initialize and parse server configuration
-        server_config = new Broker::Config::ServerConfiguration();
-        server_config->parseConfiguration(config_filepath);
-
-    } catch (Broker::Config::ConfigurationException &ce) {
-        LOG(ERROR) << "Configuration error: " << ce.getMessage();
-        abort();
-    }
-
-    return server_config;
-
-}
-
 /**
  * Main
  */
-int main(int argc, char *argv[]) {
-
-    // Load configuration from file
-    el::Configurations conf("config/logger.conf");
-    el::Loggers::reconfigureAllLoggers(conf);
-    el::Helpers::setThreadName("main");
-
-    // Registering shutdown handler
-    registerShutdownHandler();
-
-    // Load configuration
-    std::unique_ptr<Broker::Config::ServerConfiguration> server_config_ptr(
-            loadConfiguration("config/broker.cfg"));
-    LOG(INFO) << "Starting broker node " << server_config_ptr->getNodeName();
-
-    // Initialize epoll shared pointer for socket and for connection events
-    std::shared_ptr<Broker::Events::Epoll> socket_epoll_ptr(
-            new Broker::Events::Epoll("socket-epoll"));
-
-    // Initialize epoll shared pointer for incomming connection events
-    std::shared_ptr<Broker::Events::Epoll> conn_epoll_ptr(
-            new Broker::Events::Epoll("connection-epoll"));
+int main(int argc, char* argv[]) {
 
     try {
-        
+
+        std::string config_filepath;
+        std::string logger_config_filepath;
+
+        /* CMD line parser options */
+        cxxopts::Options options(argv[0], "MQTT 3.1.1. broker");
+        options.add_options()
+                ("c, conf", "Config file path", cxxopts::value<std::string>(config_filepath)->default_value("config/broker.cfg"))
+                ("l, lconf", "Logger config file path", cxxopts::value<std::string>(logger_config_filepath)->default_value("config/logger.cfg"))
+                ("v, version", "Version", cxxopts::value<std::string>()->implicit_value("1.0"))
+                ("h, help", "Help");
+
+        /* Parse command line arguments */
+        auto result = options.parse(argc, argv);
+
+        if (result.count("h")) {
+            std::cout << options.help() << std::endl;
+            return 0;
+        }
+
+        if (result.count("v")) {
+            std::cout << result["v"].as<std::string>() << std::endl;
+            return 0;
+        }
+
+        if (result.count("c")) {
+            config_filepath = result["c"].as<std::string>();
+        }
+
+        if (result.count("l")) {
+            logger_config_filepath = result["l"].as<std::string>();
+        }
+
+        // Registering shutdown handler
+        registerShutdownHandler();
+
+        // Load configuration from file
+        el::Configurations conf(logger_config_filepath.c_str());
+        el::Loggers::reconfigureAllLoggers(conf);
+        el::Helpers::setThreadName("main");
+
+        /* Initialize shared pointer to configuration */
+        std::unique_ptr<Broker::Config::ServerConfiguration> server_config_ptr(
+                new Broker::Config::ServerConfiguration());
+
+        /* Initialize and parse server configuration */
+        server_config_ptr->parseConfiguration(config_filepath);
+
+        LOG(INFO) << "Starting broker node " << server_config_ptr->getNodeName();
+
+        // Initialize epoll shared pointer for socket and for connection events
+        std::shared_ptr<Broker::Events::Epoll> socket_epoll_ptr(
+                new Broker::Events::Epoll("socket-epoll"));
+
+        // Initialize epoll shared pointer for incomming connection events
+        std::shared_ptr<Broker::Events::Epoll> conn_epoll_ptr(
+                new Broker::Events::Epoll("connection-epoll"));
+
         /* IO thread smart pointer init */
         std::unique_ptr<Broker::Net::IO::ConnectionReaderThread> io_thread_ptr_1(
-            new Broker::Net::IO::ConnectionReaderThread(conn_epoll_ptr));
-               
+                new Broker::Net::IO::ConnectionReaderThread(conn_epoll_ptr));
+
         /* Start IO thread */
         io_thread_ptr_1->start();
 
@@ -138,21 +155,30 @@ int main(int argc, char *argv[]) {
         std::unique_ptr<Broker::Net::ConnectionAcceptorThread> conn_acceptor_ptr_1(
                 new Broker::Net::ConnectionAcceptorThread(
                 socket_epoll_ptr, conn_epoll_ptr));
-        
+
         // Start the thread
         conn_acceptor_ptr_1->start();
-                
+
         /* Join IO threads */
         io_thread_ptr_1->join();
-        
+
         // Join the acceptor threads
         conn_acceptor_ptr_1->join();
 
         // Stop the TCP connector
         tcp_connector_ptr->stop();
 
-    } catch (Broker::Net::ConnectorException &conne) {
+    } catch (const Broker::Net::ConnectorException &conne) {
         LOG(ERROR) << "TCP connector exception: " << conne.what();
+        abort();
+
+    } catch (const Broker::Config::ConfigurationException& ce) {
+        LOG(ERROR) << "Configuration exception: " << ce.what();
+        abort();
+
+    } catch (const cxxopts::OptionException& oe) {
+        std::cout << oe.what() << std::endl;
+        abort();
     }
 
     return 0;
