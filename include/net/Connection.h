@@ -2,6 +2,7 @@
 #define NETWORKING_CONNECTION_H
 
 #include "sys/Descriptor.h"
+#include "MessageBuffer.h"
 
 #include <string>
 
@@ -32,6 +33,11 @@ namespace Broker {
              * Is connection closed
              */
             bool m_is_closed = false;
+            
+            /**
+             * Inbound message buffer
+             */
+            MessageBuffer m_inbound_message_buffer;            
 
         public:
 
@@ -64,6 +70,9 @@ namespace Broker {
              * Is connection closed
              */
             bool isClosed();
+            
+            /* Returns reference to the message buffer */
+            MessageBuffer& getInboundMessageBuffer();
 
         };
 

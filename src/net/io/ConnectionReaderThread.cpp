@@ -36,11 +36,102 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
+#define IO_READ_BUFFER_SIZE 8192
+#define REMAINING_LENGTH_MULTIPLIER_MAX 2097152
+
 /**
  * Destructor
  */
 Broker::Net::IO::ConnectionReaderThread::~ConnectionReaderThread() {
     LOG(INFO) << "Destructing IO thread";
+}
+
+/* Handles client closed connection */
+void Broker::Net::IO::ConnectionReaderThread::handleClientClosedConnection(
+        Broker::Net::Connection* connection) {
+
+    /* Client has closed the connection */
+    LOG(DEBUG) << "Client " << connection->getPeerIp() << " has closed the connection";
+
+    /* Remove descriptor from the epoll interest list */
+    m_conn_epoll->remove(connection->getDescriptor());
+
+    /* Remove connection from heap */
+    /* Destructor attempts to close the connection */
+    delete connection;
+}
+
+/* Handles errors on the socket */
+void Broker::Net::IO::ConnectionReaderThread::handleSocketError(
+        Broker::Net::Connection* connection,
+        epoll_event &event) {
+
+    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+
+        /* Happens when there is no bytes in the kernels 
+         * read buffer ready to be read */
+
+        LOG(DEBUG) << "Nothing to read (EAGAIN)";
+
+        /* Re-arm the socket with exactly same events */
+        m_conn_epoll->modify(connection->getDescriptor(), event);
+
+    } else {
+
+        /* TODO Handle other errors */
+
+        LOG(ERROR) << "Socket error: " << errno;
+
+        /* Remove descriptor from the epoll interest list */
+        m_conn_epoll->remove(connection->getDescriptor());
+
+        /* Remove connection from the heap */
+        /* Destructor attempts to close the connection */
+        delete connection;
+
+    }
+
+}
+
+unsigned int Broker::Net::IO::ConnectionReaderThread::getRemainingLength(char* buffer){
+    
+    // Initialize remaining length
+    unsigned int remaining_length_value = 0;
+    
+    // At which location to start decode remaining length
+    const short remaining_length_offset = 1;
+    
+    // Multiplier
+    unsigned int multiplier = 1;
+    
+    // At the beginning next encoded byte has index equal to the offset
+    unsigned short next_encoded_byte_index = remaining_length_offset;
+    
+    // Initialize encoded byte
+    char encoded_byte;
+    
+    do {
+        
+        if(buffer[next_encoded_byte_index] == NULL)
+            throw "No enough bytes to calculate remaining length";
+        
+        // Obtain next encoded byte
+        encoded_byte = buffer[next_encoded_byte_index];
+        
+        // Calculate remaining length value
+        remaining_length_value += (encoded_byte & 127) * multiplier;
+        multiplier *= 128;
+        
+        if(multiplier > REMAINING_LENGTH_MULTIPLIER_MAX )
+            throw "Malformed remaining length";
+        
+        // Increment next encoded byte index
+        next_encoded_byte_index++;
+        
+    } while ((encoded_byte & 128 ) != 0);
+    
+    // Return remainign length value
+    return remaining_length_value;
 }
 
 /**
@@ -108,58 +199,66 @@ void* Broker::Net::IO::ConnectionReaderThread::run() {
                     /* Socket ready for the read */
                     LOG(DEBUG) << "Reading bytes from client " << connection->getPeerIp();
 
-                    char read_buffer[1024];
-                    int receive_result = connection->receive(read_buffer, sizeof read_buffer);
+                    /* Initialize read buffer with 8KB length */
+                    char read_buffer[IO_READ_BUFFER_SIZE];
+
+                    /* Try to receive enough data to fill the whole read buffer */
+                    int receive_result = connection->receive(read_buffer, IO_READ_BUFFER_SIZE);
                     if (receive_result == 0) {
 
-                        /* Client has closed the connection */
-                        LOG(DEBUG) << "Client " << connection->getPeerIp() << " has closed the connection";
-
-                        /* Remove descriptor from the epoll interest list */
-                        m_conn_epoll->remove(connection->getDescriptor());
-
-                        /* Remove connection from heap */
-                        /* Destructor attempts to close the connection */
-                        delete connection;
+                        /* Handle the closed connection */
+                        handleClientClosedConnection(connection);
 
                     } else if (receive_result == -1) {
-                        
+
                         /* Error has occurred on read */
-
-                        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-
-                            /* Happens when there is no bytes in the read 
-                             * buffer ready to be read */
-
-                            LOG(DEBUG) << "Nothing to read (EAGAIN)";
-
-                            /* Re-arm the socket with exactly same events */
-                            m_conn_epoll->modify(connection->getDescriptor(), events[i]);
-
-                        } else {
-
-                            /* TODO Handle other errors */
-
-                            LOG(ERROR) << "Error: " << errno;
-
-                            /* Remove descriptor from the epoll interest list */
-                            m_conn_epoll->remove(connection->getDescriptor());
-
-                            /* Remove connection from the heap */
-                            /* Destructor attempts to close the connection */
-                            delete connection;
-                        }
+                        /* Handle socket errors */
+                        handleSocketError(connection, events[i]);
 
                     } else {
 
                         /* N bytes have been read from the kernel read buffer */
 
-                        LOG(DEBUG) << "Read " << receive_result << " from the client " << connection->getPeerIp();
+                        LOG(DEBUG) << "Received " << receive_result << " bytes from the client " << connection->getPeerIp();
 
                         /* TODO handle incomming byte stream */
                         /* In Edge-triggered mode; all available bytes have to
                          * be read, since kernel will trigger an event only in
                          * case when new bytes are stored into the read buffer */
+
+                        /* Get inbound message buffer of the connection */
+                        Broker::Net::MessageBuffer& inbound_message_buffer 
+                                = connection->getInboundMessageBuffer();
+                        
+                        if (inbound_message_buffer.isInFlight()) {
+
+                            /* Message is in-flight --> only part of message is received already */
+
+                        } else {
+                            
+                            LOG(DEBUG) << "Read buffer size: " << strlen(read_buffer);
+
+                            /* No message bytes in the buffer at the moment */
+
+                            /* Received at least 2 bytes?
+                             * 1st byte = MQTT control packet type and flags 
+                             * specific to the MQTT control packet type */
+                            if (receive_result >= 2) {
+
+                                /* Determine size of the message */
+                                
+
+                            } else {
+
+                                /* Received only 1 byte */
+                                /* Add it to the buffer,  */
+                                // TODO add to buffer
+                                inbound_message_buffer.addToBuffer(read_buffer, receive_result);
+                                
+                                /* Set message to be in-flight */
+                                inbound_message_buffer.setInFlight(true);
+                            }
+                        }
 
                         /* Re-arm the socket to receave new events */
                         m_conn_epoll->modify(connection->getDescriptor(), events[i]);

@@ -51,6 +51,29 @@ namespace Broker {
                 /* Connection epoll instance
                  * All client sockets are registered to this epoll instance */
                 const std::shared_ptr<Broker::Events::Epoll>& m_conn_epoll;
+                
+                /**
+                 * Triggered when EPOLLIN event received on the socket, but
+                 * obtained 0 bytes from the kernel read buffer via read call
+                 * 
+                 * @param connection    the client connection
+                 */
+                void handleClientClosedConnection(
+                    Broker::Net::Connection* connection);
+                
+                /**
+                 * Triggered when read operation on socket resulted with -1.
+                 * Errno external variable is set accordingly.
+                 * 
+                 * @param connection    the client connection
+                 * @param event         the epoll event
+                 */
+                void handleSocketError(
+                    Broker::Net::Connection* connection,
+                    epoll_event &event);
+                
+                /* Decodes remaining length from the buffer */
+                unsigned int getRemainingLength(char* buffer);
 
             public:
 
