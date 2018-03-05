@@ -23,36 +23,45 @@
  */
 
 /* 
- * File:   EpollException.h
+ * File:   RemainingLength.h
  * Author: bbijelic
  *
- * Created on March 5, 2018, 12:59 AM
+ * Created on March 5, 2018, 12:48 AM
  */
 
-#ifndef EVENTS_EPOLLEXCEPTION_H
-#define EVENTS_EPOLLEXCEPTION_H
+#ifndef REMAININGLENGTH_H
+#define REMAININGLENGTH_H
 
-#include <string>
-#include <exception>
+#include <vector>
+
+#define REMAINING_LENGTH_MULTIPLIER_MAX 128*128*128
 
 namespace Broker {
-    namespace Events {
-
-        class EpollException : public std::exception {
-        private:
-            
-            // Exception message
-            std::string m_message;
-
+    namespace Mqtt {
+    
+        /* Remaining length util class */
+        class RemainingLength {
         public:
-
-            // Constructor
-            EpollException(std::string message) : m_message(message) {};
-
-            virtual char const* what() const throw ();
-
+            
+            /**
+             * Decodes remaining length bytes to unsigned integer
+             * 
+             * @param buffer    the byte buffer
+             * @param offset    the offset of the remaining length
+             */
+            static unsigned int decode(char* buffer, const unsigned int offset);
+            
+            /**
+             * Encodes unsigned integer size to the vector of chars
+             * 
+             * @param size  the remaining length value
+             * @return the vector containing encoded bytes
+             */
+            static const std::vector<char> encode(unsigned int size);
+            
         };
     }
 }
 
-#endif
+#endif /* REMAININGLENGTH_H */
+

@@ -23,22 +23,23 @@
  */
 
 /* 
- * File:   EpollException.h
+ * File:   RemainingLengthException.h
  * Author: bbijelic
  *
  * Created on March 5, 2018, 12:59 AM
  */
 
-#ifndef EVENTS_EPOLLEXCEPTION_H
-#define EVENTS_EPOLLEXCEPTION_H
+#ifndef REMAININGLENGTHEXCEPTION_H
+#define REMAININGLENGTHEXCEPTION_H
 
 #include <string>
 #include <exception>
 
 namespace Broker {
-    namespace Events {
-
-        class EpollException : public std::exception {
+    namespace Mqtt {
+    
+        /* Remaining length exception */
+        class RemainingLengthException : public std::exception {
         private:
             
             // Exception message
@@ -47,12 +48,14 @@ namespace Broker {
         public:
 
             // Constructor
-            EpollException(std::string message) : m_message(message) {};
+            RemainingLengthException(std::string message) : m_message(message) {};
 
             virtual char const* what() const throw ();
 
         };
+    
     }
 }
 
-#endif
+#endif /* REMAININGLENGTHEXCEPTION_H */
+

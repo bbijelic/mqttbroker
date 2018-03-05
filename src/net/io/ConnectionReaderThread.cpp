@@ -27,6 +27,7 @@
 #include "events/Epoll.h"
 #include "events/EpollException.h"
 #include "net/Connection.h"
+#include "mqtt/RemainingLength.h"
 
 #include <memory>
 #include <string>
@@ -37,7 +38,6 @@
 #include <arpa/inet.h>
 
 #define IO_READ_BUFFER_SIZE 8192
-#define REMAINING_LENGTH_MULTIPLIER_MAX 2097152
 
 /**
  * Destructor
@@ -91,47 +91,6 @@ void Broker::Net::IO::ConnectionReaderThread::handleSocketError(
 
     }
 
-}
-
-unsigned int Broker::Net::IO::ConnectionReaderThread::getRemainingLength(char* buffer){
-    
-    // Initialize remaining length
-    unsigned int remaining_length_value = 0;
-    
-    // At which location to start decode remaining length
-    const short remaining_length_offset = 1;
-    
-    // Multiplier
-    unsigned int multiplier = 1;
-    
-    // At the beginning next encoded byte has index equal to the offset
-    unsigned short next_encoded_byte_index = remaining_length_offset;
-    
-    // Initialize encoded byte
-    char encoded_byte;
-    
-    do {
-        
-        if(buffer[next_encoded_byte_index] == NULL)
-            throw "No enough bytes to calculate remaining length";
-        
-        // Obtain next encoded byte
-        encoded_byte = buffer[next_encoded_byte_index];
-        
-        // Calculate remaining length value
-        remaining_length_value += (encoded_byte & 127) * multiplier;
-        multiplier *= 128;
-        
-        if(multiplier > REMAINING_LENGTH_MULTIPLIER_MAX )
-            throw "Malformed remaining length";
-        
-        // Increment next encoded byte index
-        next_encoded_byte_index++;
-        
-    } while ((encoded_byte & 128 ) != 0);
-    
-    // Return remainign length value
-    return remaining_length_value;
 }
 
 /**
@@ -246,7 +205,9 @@ void* Broker::Net::IO::ConnectionReaderThread::run() {
                             if (receive_result >= 2) {
 
                                 /* Determine size of the message */
-                                
+                                unsigned int remaining_length 
+                                    = Broker::Mqtt::RemainingLength::decode(read_buffer, 1);
+                                LOG(DEBUG) << "Remaining length: " << remaining_length;
 
                             } else {
 
