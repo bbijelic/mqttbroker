@@ -48,6 +48,8 @@ namespace Broker {
              * 
              * @param buffer    the byte buffer
              * @param offset    the offset of the remaining length
+             * 
+             * @return the decoded remaining length value
              */
             static unsigned int decode(char* buffer, const unsigned int offset);
             
@@ -58,6 +60,16 @@ namespace Broker {
              * @return the vector containing encoded bytes
              */
             static const std::vector<char> encode(unsigned int size);
+            
+            /**
+             * Returns how many bytes is used to encode remaining lenght info
+             * 
+             * @param remaining_length the remaining length value
+             * 
+             * @return the number of bytes used to encode remaining length;
+             *  varies between 1 and 4 (inclusive)
+             */
+            static unsigned int remainingLengthBytesLength(unsigned int remaining_length);
             
         };
     }

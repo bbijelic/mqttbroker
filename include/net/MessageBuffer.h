@@ -48,7 +48,7 @@ namespace Broker {
             std::vector<char> m_buffer_vector;
             
             /* Total message size */
-            int m_total_message_size;
+            unsigned int m_total_message_size;
 
         public:
             
@@ -69,10 +69,10 @@ namespace Broker {
             void addToBuffer(char* bytes, int bytes_length);
             
             /* Returns total message size in bytes */
-            int getMessageSize();
+            unsigned int getMessageSize();
             
             /* Sets total message size */
-            void setMessageSize(int size);
+            void setMessageSize(unsigned int size);
             
         };
 

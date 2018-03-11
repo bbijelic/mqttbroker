@@ -28,6 +28,7 @@
 #include "events/EpollException.h"
 #include "net/Connection.h"
 #include "mqtt/RemainingLength.h"
+#include "mqtt/RemainingLengthException.h"
 
 #include <memory>
 #include <string>
@@ -124,17 +125,19 @@ void* Broker::Net::IO::ConnectionReaderThread::run() {
             /* Error occured on epoll wait call */
 
             switch (errno) {
-                case EBADF: LOG(ERROR) << EPOLL_EBADF_MSG;
-                case EFAULT: LOG(ERROR) << EPOLL_EFAULT_MSG;
-                case EINTR: LOG(ERROR) << EPOLL_EINTR_MSG;
-                case EINVAL: LOG(ERROR) << EPOLL_EINVAL_MSG;
+                case EBADF:     LOG(ERROR) << EPOLL_EBADF_MSG;
+                case EFAULT:    LOG(ERROR) << EPOLL_EFAULT_MSG;
+                case EINTR:     LOG(ERROR) << EPOLL_EINTR_MSG;
+                case EINVAL:    LOG(ERROR) << EPOLL_EINVAL_MSG;
             }
 
             /* Break the while loop */
             break;
         }
 
-        LOG(DEBUG) << "Epoll '" << m_conn_epoll->getName() << "' provided " << epoll_wait_result << " events to handle";
+        LOG(DEBUG) << "Epoll '" << m_conn_epoll->getName() 
+                << "' provided " << epoll_wait_result << " events to handle";
+        
         for (int i = 0; i < epoll_wait_result; i++) {
 
             /* Cast the data pointer to the connection pointer */
@@ -143,7 +146,8 @@ void* Broker::Net::IO::ConnectionReaderThread::run() {
 
             try {
 
-                if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP)
+                if ((events[i].events & EPOLLERR)
+                        || (events[i].events & EPOLLHUP)
                         || (events[i].events & EPOLLRDHUP)) {
 
                     /* Error occurred */
@@ -152,6 +156,9 @@ void* Broker::Net::IO::ConnectionReaderThread::run() {
                     if (getsockopt(connection->getDescriptor(), SOL_SOCKET, SO_ERROR, (void *) &error, &errlen) == 0) {
                         LOG(ERROR) << "Socket error: " << strerror(error);
                     }
+
+                    // Close connection
+                    handleSocketError(connection, events[i]);
 
                 } else if (events[i].events & EPOLLIN) {
 
@@ -178,7 +185,8 @@ void* Broker::Net::IO::ConnectionReaderThread::run() {
 
                         /* N bytes have been read from the kernel read buffer */
 
-                        LOG(DEBUG) << "Received " << receive_result << " bytes from the client " << connection->getPeerIp();
+                        LOG(DEBUG) << "Received " << receive_result
+                                << " bytes from the client " << connection->getPeerIp();
 
                         /* TODO handle incomming byte stream */
                         /* In Edge-triggered mode; all available bytes have to
@@ -186,15 +194,22 @@ void* Broker::Net::IO::ConnectionReaderThread::run() {
                          * case when new bytes are stored into the read buffer */
 
                         /* Get inbound message buffer of the connection */
-                        Broker::Net::MessageBuffer& inbound_message_buffer 
+                        Broker::Net::MessageBuffer& inbound_message_buffer
                                 = connection->getInboundMessageBuffer();
-                        
+
                         if (inbound_message_buffer.isInFlight()) {
 
                             /* Message is in-flight --> only part of message is received already */
+                            
+                            /* Do we know already the size of the message? */
+                            if(inbound_message_buffer.getMessageSize() == 0){
+                                // Size of the inbound message is unknown
+                                
+                                
+                            }
 
                         } else {
-                            
+
                             LOG(DEBUG) << "Read buffer size: " << strlen(read_buffer);
 
                             /* No message bytes in the buffer at the moment */
@@ -205,20 +220,38 @@ void* Broker::Net::IO::ConnectionReaderThread::run() {
                             if (receive_result >= 2) {
 
                                 /* Determine size of the message */
-                                unsigned int remaining_length 
-                                    = Broker::Mqtt::RemainingLength::decode(read_buffer, 1);
-                                LOG(DEBUG) << "Remaining length: " << remaining_length;
+                                unsigned int remaining_length = 0;
 
-                            } else {
+                                try {
 
-                                /* Received only 1 byte */
-                                /* Add it to the buffer,  */
-                                // TODO add to buffer
-                                inbound_message_buffer.addToBuffer(read_buffer, receive_result);
-                                
-                                /* Set message to be in-flight */
-                                inbound_message_buffer.setInFlight(true);
+                                    /* Try to decode remaining length from the received bytes */
+                                    remaining_length = Broker::Mqtt::RemainingLength::decode(read_buffer, 1);
+                                    LOG(DEBUG) << "Remaining length: " << remaining_length;
+                                    
+                                    /* Total message size is sum of size of fixed header, variable header and payload */
+                                    /* Fixed header is always 1 byte, remaining length = variable header + payload size */
+                                    unsigned int total_message_size = 
+                                        1 + Broker::Mqtt::RemainingLength::remainingLengthBytesLength(remaining_length) + remaining_length;
+                                    
+                                    LOG(DEBUG) << "Message size: " << total_message_size << " bytes";
+                                    
+                                    /* Setting message size in the inbound message buffer
+                                     * so that we know size already when the next bytes are
+                                     * received */
+                                    inbound_message_buffer.setMessageSize(total_message_size);
+                                    
+                                } catch (const Broker::Mqtt::RemainingLengthException& rmle) {
+                                    LOG(DEBUG) << "Remaining length exception: " << rmle.what();
+
+                                }
+
                             }
+
+                            /* Add all received bytes to the inbound message buffer */
+                            inbound_message_buffer.addToBuffer(read_buffer, receive_result);
+
+                            /* Set message to be in-flight */
+                            inbound_message_buffer.setInFlight(true);
                         }
 
                         /* Re-arm the socket to receave new events */

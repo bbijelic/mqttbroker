@@ -80,3 +80,16 @@ const std::vector<char> Broker::Mqtt::RemainingLength::encode(unsigned int size)
     // return encoded vector
     return encoded_vector;
 }
+
+unsigned int Broker::Mqtt::RemainingLength::remainingLengthBytesLength(unsigned int remaining_length){
+    
+    /* Initializing to 1, since it's a lowest possible length */
+    /* Even if remaining length = 0, number bytes needed is 1 */
+    unsigned int byte_length = 1;
+    
+    if (remaining_length >= 128 && remaining_length <= 16383) byte_length = 2;
+    else if (remaining_length >= 16384 && remaining_length <= 2097151) byte_length = 3;
+    else if (remaining_length >= 2097152 && remaining_length <= 268435455) byte_length = 4;
+    
+    return byte_length;
+}
