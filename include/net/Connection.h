@@ -37,7 +37,12 @@ namespace Broker {
             /**
              * Inbound message buffer
              */
-            MessageBuffer m_inbound_message_buffer;            
+            MessageBuffer m_inbound_message_buffer;  
+            
+            /**
+             * Outbound message buffer
+             */
+            MessageBuffer m_outbound_message_buffer;
 
         public:
 
@@ -71,8 +76,11 @@ namespace Broker {
              */
             bool isClosed();
             
-            /* Returns reference to the message buffer */
+            /* Returns reference to the inbound message buffer */
             MessageBuffer& getInboundMessageBuffer();
+            
+            /* Returns reference to the outbound message buffer */
+            MessageBuffer& getOutboundMessageBuffer();
 
         };
 

@@ -12,7 +12,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build)
 # Include dirs
 include_directories("include")
 
-# Copyng configuration to the build directory
+# Copying configuration to the build directory
 file(COPY "config" DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
 # Source files

@@ -70,14 +70,23 @@ void Broker::Net::MessageBuffer::addToBuffer(char* bytes, int bytes_length){
     LOG(DEBUG) << "Size of message buffer: " << m_buffer_vector.size() << " bytes";
 }
 
-/* Returns full message size */
-unsigned int Broker::Net::MessageBuffer::getMessageSize() {
+/* Returns buffer size */
+unsigned int Broker::Net::MessageBuffer::getBufferSize() {
     return m_buffer_vector.size();
+}
+
+unsigned int Broker::Net::MessageBuffer::getMessageSize(){
+    return m_total_message_size;
 }
 
 /* Sets total message size */
 void Broker::Net::MessageBuffer::setMessageSize(unsigned int size){
     m_total_message_size = size;
+}
+
+/* Return array pointer to underlaying char array */
+char* Broker::Net::MessageBuffer::getCharArray(){
+    return m_buffer_vector.data();
 }
 
 

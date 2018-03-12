@@ -68,11 +68,19 @@ namespace Broker {
             /* Adds bytes to the buffer  */
             void addToBuffer(char* bytes, int bytes_length);
             
+            /* Returns buffer size */
+            unsigned int getBufferSize();
+            
             /* Returns total message size in bytes */
             unsigned int getMessageSize();
             
             /* Sets total message size */
             void setMessageSize(unsigned int size);
+            
+            /* Returns char array */
+            char* getCharArray();
+            
+            
             
         };
 

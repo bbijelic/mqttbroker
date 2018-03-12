@@ -50,3 +50,8 @@ bool Broker::Net::Connection::isClosed() {
 Broker::Net::MessageBuffer& Broker::Net::Connection::getInboundMessageBuffer(){
     return m_inbound_message_buffer;
 }
+
+/* Returns reference to the outbound message buffer */
+Broker::Net::MessageBuffer& Broker::Net::Connection::getOutboundMessageBuffer(){
+    return m_outbound_message_buffer;
+}
