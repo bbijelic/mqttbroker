@@ -38,8 +38,8 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
-/* Default size: 8192 */
-#define IO_READ_BUFFER_SIZE 8192
+/* Default size: 4096 */
+#define IO_READ_BUFFER_SIZE 4096
 
 /**
  * Destructor
@@ -103,6 +103,163 @@ void Broker::Net::IO::ConnectionReaderThread::handleCompleteMessage(
             << " bytes) from the client " << connection->getPeerIp();
 }
 
+void Broker::Net::IO::ConnectionReaderThread::handleInboundBytes(
+        Broker::Net::Connection* connection,
+        epoll_event &event) {
+
+    /* Socket ready for the read */
+    LOG(DEBUG) << "Reading bytes from client " << connection->getPeerIp();
+
+    /* Initialize read buffer with 8KB length */
+    char read_buffer[IO_READ_BUFFER_SIZE];
+
+    /* Try to receive enough data to fill the whole read buffer */
+    int receive_result = 0;
+
+    /* Ordinal number of the chunk */
+    unsigned short chunk = 1;
+
+    // Read until there is data to be read in the kernel input buffer
+    while ((receive_result = connection->receive(read_buffer, IO_READ_BUFFER_SIZE)) > 0) {
+
+        /* N bytes have been read from the kernel read buffer */
+
+        LOG(DEBUG) << "Received chunk " << chunk++ << ": " << receive_result
+                << " bytes from the client " << connection->getPeerIp();
+
+        /* TODO handle incomming byte stream */
+        /* In Edge-triggered mode; all available bytes have to
+         * be read, since kernel will trigger an event only in
+         * case when new bytes are stored into the read buffer */
+
+        /* Get inbound message buffer of the connection */
+        Broker::Net::MessageBuffer& inbound_message_buffer
+                = connection->getInboundMessageBuffer();
+
+        /* Add all received bytes to the inbound message buffer */
+        inbound_message_buffer.addToBuffer(read_buffer, receive_result);
+
+        /* Do we know already the size of the message? */
+        if (inbound_message_buffer.getMessageSize() == 0) {
+
+            /* Size of the inbound message is unknown */
+
+            try {
+
+                /* Try to decode remaining length from the bytes we already have */
+                const unsigned int remaining_length
+                        = Broker::Mqtt::RemainingLength::decode(inbound_message_buffer.getCharArray(), 1);
+
+                /* Find how many bytes was used to encode remaining length */
+                const unsigned int remaining_length_bytes
+                        = Broker::Mqtt::RemainingLength::remainingLengthBytesLength(remaining_length);
+
+                /* Calculate total message size */
+                /* Control packet type byte + number of remaining length bytes + (variable header and payload) */
+                const unsigned int total_message_size =
+                        1 + remaining_length_bytes + remaining_length;
+
+                LOG(DEBUG) << "Message remaining length successfully decoded: " << remaining_length << " bytes";
+
+                /* Set message size on the inbound message buffer */
+                inbound_message_buffer.setMessageSize(total_message_size);
+
+            } catch (const Broker::Mqtt::RemainingLengthException& rmle) {
+                LOG(DEBUG) << "Remaining length exception: " << rmle.what();
+
+                /* Dont need special handling, just wait for 
+                 * the next bytes from the kernel buffer */
+            }
+
+        }
+
+        if (inbound_message_buffer.getMessageSize()
+                <= inbound_message_buffer.getBufferSize()) {
+
+            /* Whole message is in inbound message buffer */
+            /* It is possible that inbound message buffer contains 
+             * bytes from the next message also */
+            handleCompleteMessage(connection, &inbound_message_buffer);
+
+        } else if (inbound_message_buffer.getMessageSize()
+                > inbound_message_buffer.getBufferSize()) {
+
+            /* Calculate missing bytes */
+            unsigned int missing_bytes
+                    = inbound_message_buffer.getMessageSize() - inbound_message_buffer.getBufferSize();
+
+            /* Still dont have whole message */
+            LOG(DEBUG) << "Message not yet complete, still missing "
+                    << missing_bytes << " bytes";
+
+        }
+
+    }
+
+    /* Re-arm the socket to receave new events */
+    m_conn_epoll->modify(connection->getDescriptor(), event);
+
+    if (receive_result == 0) {
+
+        /* When recv returns 0 it means end of file, 
+         * e.g. client closed the connection */
+        /* Handle the closed connection */
+        handleClientClosedConnection(connection);
+
+    } else if (receive_result == -1) {
+
+        /* Error has occurred on read */
+        /* Handle socket errors */
+        handleSocketError(connection, event);
+
+    }
+
+}
+
+void Broker::Net::IO::ConnectionReaderThread::handleOutboundBytes(
+        Broker::Net::Connection* connection,
+        epoll_event& event) {
+
+    /* Socket is ready for write operation */
+    /* Generaly, socket is always write-ready, but only in case when
+     * kernels write buffer is full, send() would return -1 and
+     * set errno to EAGAIN or EWOULDBLOCK; in this case, socket should
+     * be re-armed with EPOLLOUT event to be notified when write buffer
+     * becomes ready for write again */
+
+    LOG(DEBUG) << "Resuming sending bytes to client " << connection->getPeerIp();
+
+    /* TODO Should to implement connection write buffer */
+
+}
+
+void Broker::Net::IO::ConnectionReaderThread::handleEventOnConnection(
+        Broker::Net::Connection* connection,
+        epoll_event& event) {
+
+    if ((event.events & EPOLLERR)
+            || (event.events & EPOLLHUP)
+            || (event.events & EPOLLRDHUP)) {
+
+        /* Error occurred on the socket */
+        handleSocketError(connection, event);
+
+    } else if (event.events & EPOLLIN) {
+
+        /* Socket is ready to be read */
+        /* Handle inbound byte stream */
+        handleInboundBytes(connection, event);
+
+    } else if (event.events & EPOLLOUT) {
+
+        /* Socket is ready to be written */
+        /* Handle outbound byte stream */
+        handleOutboundBytes(connection, event);
+
+    }
+
+}
+
 /**
  * Thread run method
  */
@@ -156,134 +313,8 @@ void* Broker::Net::IO::ConnectionReaderThread::run() {
 
             try {
 
-                if ((events[i].events & EPOLLERR)
-                        || (events[i].events & EPOLLHUP)
-                        || (events[i].events & EPOLLRDHUP)) {
-
-                    /* Error occurred */
-                    int error = 0;
-                    socklen_t errlen = sizeof (error);
-                    if (getsockopt(connection->getDescriptor(), SOL_SOCKET, SO_ERROR, (void *) &error, &errlen) == 0) {
-                        LOG(ERROR) << "Socket error: " << strerror(error);
-                    }
-
-                    // Close connection
-                    handleSocketError(connection, events[i]);
-
-                } else if (events[i].events & EPOLLIN) {
-
-                    /* Socket ready for the read */
-                    LOG(DEBUG) << "Reading bytes from client " << connection->getPeerIp();
-
-                    /* Initialize read buffer with 8KB length */
-                    char read_buffer[IO_READ_BUFFER_SIZE];
-
-                    /* Try to receive enough data to fill the whole read buffer */
-                    int receive_result = 0;
-
-                    /* Ordinal number of the chunk */
-                    unsigned short chunk = 1;
-
-                    // Read until there is data to be read in the kernel input buffer
-                    while ((receive_result = connection->receive(read_buffer, IO_READ_BUFFER_SIZE)) > 0) {
-
-                        /* N bytes have been read from the kernel read buffer */
-
-                        LOG(DEBUG) << "Received chunk " << chunk++ << ": " << receive_result
-                                << " bytes from the client " << connection->getPeerIp();
-
-                        /* TODO handle incomming byte stream */
-                        /* In Edge-triggered mode; all available bytes have to
-                         * be read, since kernel will trigger an event only in
-                         * case when new bytes are stored into the read buffer */
-
-                        /* Get inbound message buffer of the connection */
-                        Broker::Net::MessageBuffer& inbound_message_buffer
-                                = connection->getInboundMessageBuffer();
-
-                        /* Add all received bytes to the inbound message buffer */
-                        inbound_message_buffer.addToBuffer(read_buffer, receive_result);
-
-                        /* Do we know already the size of the message? */
-                        if (inbound_message_buffer.getMessageSize() == 0) {
-
-                            /* Size of the inbound message is unknown */
-
-                            try {
-
-                                /* Try to decode remaining length from the bytes we already have */
-                                const unsigned int remaining_length
-                                        = Broker::Mqtt::RemainingLength::decode(inbound_message_buffer.getCharArray(), 1);
-
-                                /* Find how many bytes was used to encode remaining length */
-                                const unsigned int remaining_length_bytes
-                                        = Broker::Mqtt::RemainingLength::remainingLengthBytesLength(remaining_length);
-
-                                /* Calculate total message size */
-                                /* Control packet type byte + number of remaining length bytes + (variable header and payload) */
-                                const unsigned int total_message_size =
-                                        1 + remaining_length_bytes + remaining_length;
-
-                                LOG(DEBUG) << "Message remaining length successfully decoded: " << remaining_length << " bytes";
-
-                                /* Set message size on the inbound message buffer */
-                                inbound_message_buffer.setMessageSize(total_message_size);
-
-                            } catch (const Broker::Mqtt::RemainingLengthException& rmle) {
-                                LOG(DEBUG) << "Remaining length exception: " << rmle.what();
-
-                                /* Dont need special handling, just wait for 
-                                 * the next bytes from the kernel buffer */
-                            }
-
-                        }
-
-                        if (inbound_message_buffer.getMessageSize() <= inbound_message_buffer.getBufferSize()) {
-
-                            /* Whole message is in inbound message buffer */
-                            /* It is possible that inbound message buffer contains 
-                             * bytes from the next message also */
-                            handleCompleteMessage(connection, &inbound_message_buffer);
-
-                        } else if (inbound_message_buffer.getMessageSize() > inbound_message_buffer.getBufferSize()) {
-
-                            /* Still dont have whole message */
-                            LOG(DEBUG) << "Message contained in inbound message buffer is not complete";
-
-                        }
-
-                    }
-
-                    /* Re-arm the socket to receave new events */
-                    m_conn_epoll->modify(connection->getDescriptor(), events[i]);
-
-                    if (receive_result == 0) {
-
-                        /* Handle the closed connection */
-                        handleClientClosedConnection(connection);
-
-                    } else if (receive_result == -1) {
-
-                        /* Error has occurred on read */
-                        /* Handle socket errors */
-                        handleSocketError(connection, events[i]);
-
-                    }
-
-                } else if (events[i].events & EPOLLOUT) {
-
-                    /* Socket is ready for write operation */
-                    /* Generaly, socket is always write-ready, but only in case when
-                     * kernels write buffer is full, send() would return -1 and
-                     * set errno to EAGAIN or EWOULDBLOCK; in this case, socket should
-                     * be re-armed with EPOLLOUT event to be notified when write buffer
-                     * becomes ready for write again */
-
-                    LOG(DEBUG) << "Resuming sending bytes to client " << connection->getPeerIp();
-
-                    /* TODO Should to implement connection write buffer */
-
-                }
+                /* Handle event on a connection */
+                handleEventOnConnection(connection, events[i]);
 
             } catch (const Broker::Events::EpollException &ee) {
                 LOG(ERROR) << "Exception has occured while handling an event from the client: " << ee.what();

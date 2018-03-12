@@ -81,6 +81,33 @@ namespace Broker {
                         Broker::Net::Connection* connection,
                         Broker::Net::MessageBuffer *message_buffer);
 
+                /**
+                 * Handles inbound bytes on the connection
+                 * @param connection    the client connection
+                 * @param event         the epoll event
+                 */
+                void handleInboundBytes(
+                        Broker::Net::Connection* connection,
+                        epoll_event &event);
+
+                /**
+                 * Handles outbound bytes on the connection
+                 * @param connection    the client connection
+                 * @param event         the epoll event
+                 */
+                void handleOutboundBytes(
+                        Broker::Net::Connection* connection,
+                        epoll_event &event);
+
+                /**
+                 * Handles event on a connection
+                 * @param connection    the client connection
+                 * @param event         the epoll event
+                 */
+                void handleEventOnConnection(
+                        Broker::Net::Connection* connection,
+                        epoll_event &event);
+
             public:
 
                 /* Constructor */
