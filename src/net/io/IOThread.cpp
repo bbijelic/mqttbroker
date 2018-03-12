@@ -22,7 +22,7 @@
  * THE SOFTWARE.
  */
 
-#include "net/io/ConnectionReaderThread.h"
+#include "net/io/IOThread.h"
 #include "logging/easylogging++.h"
 #include "events/Epoll.h"
 #include "events/EpollException.h"
@@ -44,12 +44,12 @@
 /**
  * Destructor
  */
-Broker::Net::IO::ConnectionReaderThread::~ConnectionReaderThread() {
+Broker::Net::IO::IOThread::~IOThread() {
     LOG(INFO) << "Destructing IO thread";
 }
 
 /* Handles client closed connection */
-void Broker::Net::IO::ConnectionReaderThread::handleClientClosedConnection(
+void Broker::Net::IO::IOThread::handleClientClosedConnection(
         Broker::Net::Connection* connection) {
 
     /* Client has closed the connection */
@@ -64,7 +64,7 @@ void Broker::Net::IO::ConnectionReaderThread::handleClientClosedConnection(
 }
 
 /* Handles errors on the socket */
-void Broker::Net::IO::ConnectionReaderThread::handleSocketError(
+void Broker::Net::IO::IOThread::handleSocketError(
         Broker::Net::Connection* connection,
         epoll_event &event) {
 
@@ -95,7 +95,7 @@ void Broker::Net::IO::ConnectionReaderThread::handleSocketError(
 
 }
 
-void Broker::Net::IO::ConnectionReaderThread::handleCompleteMessage(
+void Broker::Net::IO::IOThread::handleCompleteMessage(
         Broker::Net::Connection* connection,
         Broker::Net::MessageBuffer* message_buffer) {
 
@@ -103,7 +103,7 @@ void Broker::Net::IO::ConnectionReaderThread::handleCompleteMessage(
             << " bytes) from the client " << connection->getPeerIp();
 }
 
-void Broker::Net::IO::ConnectionReaderThread::handleInboundBytes(
+void Broker::Net::IO::IOThread::handleInboundBytes(
         Broker::Net::Connection* connection,
         epoll_event &event) {
 
@@ -216,7 +216,7 @@ void Broker::Net::IO::ConnectionReaderThread::handleInboundBytes(
 
 }
 
-void Broker::Net::IO::ConnectionReaderThread::handleOutboundBytes(
+void Broker::Net::IO::IOThread::handleOutboundBytes(
         Broker::Net::Connection* connection,
         epoll_event& event) {
 
@@ -233,7 +233,7 @@ void Broker::Net::IO::ConnectionReaderThread::handleOutboundBytes(
 
 }
 
-void Broker::Net::IO::ConnectionReaderThread::handleEventOnConnection(
+void Broker::Net::IO::IOThread::handleEventOnConnection(
         Broker::Net::Connection* connection,
         epoll_event& event) {
 
@@ -263,7 +263,7 @@ void Broker::Net::IO::ConnectionReaderThread::handleEventOnConnection(
 /**
  * Thread run method
  */
-void* Broker::Net::IO::ConnectionReaderThread::run() {
+void* Broker::Net::IO::IOThread::run() {
 
     /* Set the thread name */
     /* Thread name has not other purpose other than logging */

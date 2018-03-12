@@ -44,8 +44,8 @@ namespace Broker {
     namespace Net {
         namespace IO {
 
-            /* Connection reader thread */
-            class ConnectionReaderThread : public Broker::Concurrent::Thread {
+            /* IO thread */
+            class IOThread : public Broker::Concurrent::Thread {
             private:
 
                 /* Connection epoll instance
@@ -111,13 +111,13 @@ namespace Broker {
             public:
 
                 /* Constructor */
-                ConnectionReaderThread(
+                IOThread(
                         const std::shared_ptr<Broker::Events::Epoll>& conn_epoll)
                 : m_conn_epoll(conn_epoll) {
                 };
 
                 /* Destructor */
-                ~ConnectionReaderThread();
+                ~IOThread();
 
                 /* Run */
                 void* run();

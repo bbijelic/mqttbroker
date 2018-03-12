@@ -30,7 +30,7 @@
  */
 
 #include "sys/ShutdownHandler.h"
-#include "net/io/ConnectionReaderThread.h"
+#include "net/io/IOThread.h"
 #include "net/tcp/TcpConnector.h"
 #include "net/ConnectionAcceptorThread.h"
 #include "net/ConnectorException.h"
@@ -44,6 +44,9 @@
 
 INITIALIZE_EASYLOGGINGPP
 
+#define CONFIG_FILEPATH "config/broker.cfg"
+#define LOGGER_CONFIG_FILEPATH "config/logger.cfg";
+
 /**
  * Main
  */
@@ -55,8 +58,8 @@ int main(int argc, char* argv[]) {
 
     try {
 
-        std::string config_filepath = "config/broker.cfg";
-        std::string logger_config_filepath = "config/logger.cfg";
+        std::string config_filepath = CONFIG_FILEPATH;
+        std::string logger_config_filepath = LOGGER_CONFIG_FILEPATH;
 
         // Load configuration from file
         el::Configurations conf(logger_config_filepath.c_str());
@@ -81,8 +84,8 @@ int main(int argc, char* argv[]) {
                 new Broker::Events::Epoll("connection-epoll"));
 
         /* IO thread smart pointer init */
-        std::unique_ptr<Broker::Net::IO::ConnectionReaderThread> io_thread_ptr_1(
-                new Broker::Net::IO::ConnectionReaderThread(conn_epoll_ptr));
+        std::unique_ptr<Broker::Net::IO::IOThread> io_thread_ptr_1(
+                new Broker::Net::IO::IOThread(conn_epoll_ptr));
 
         /* Start IO thread */
         io_thread_ptr_1->start();
