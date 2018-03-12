@@ -238,20 +238,17 @@ void* Broker::Net::IO::ConnectionReaderThread::run() {
 
                         }
 
-                        if (inbound_message_buffer.getMessageSize() == inbound_message_buffer.getBufferSize()) {
+                        if (inbound_message_buffer.getMessageSize() <= inbound_message_buffer.getBufferSize()) {
 
                             /* Whole message is in inbound message buffer */
+                            /* It is possible that inbound message buffer contains 
+                             * bytes from the next message also */
                             handleCompleteMessage(connection, &inbound_message_buffer);
 
                         } else if (inbound_message_buffer.getMessageSize() > inbound_message_buffer.getBufferSize()) {
 
                             /* Still dont have whole message */
                             LOG(DEBUG) << "Message contained in inbound message buffer is not complete";
-
-                        } else if (inbound_message_buffer.getMessageSize() < inbound_message_buffer.getBufferSize()) {
-
-                            /* We have whole message in the input buffer + some more bytes of the next message */
-                            LOG(DEBUG) << "Whole message is contained in inbound message buffer and partialy next message";
 
                         }
 
