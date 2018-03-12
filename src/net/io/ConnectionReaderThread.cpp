@@ -39,7 +39,7 @@
 #include <arpa/inet.h>
 
 /* Default size: 8192 */
-#define IO_READ_BUFFER_SIZE 5
+#define IO_READ_BUFFER_SIZE 8192
 
 /**
  * Destructor
