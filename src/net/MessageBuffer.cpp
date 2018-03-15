@@ -27,16 +27,13 @@
 
 /* Constructor */
 Broker::Net::MessageBuffer::MessageBuffer(){
-    
+
     // Set total message size
     m_total_message_size = 0;
-    
-    // Message is not in-flight
-    m_is_inflight = false;
-    
+
     // Reserve vector size
-    m_buffer_vector.reserve(8192);    
-    
+    m_buffer_vector.reserve(8192);
+
     LOG(DEBUG) << "Initialized message buffer on the connection";
 }
 
@@ -44,27 +41,17 @@ Broker::Net::MessageBuffer::MessageBuffer(){
 Broker::Net::MessageBuffer::~MessageBuffer() {
     /* Clear the message buffer */
     m_buffer_vector.clear();
-    
+
     LOG(DEBUG) << "De-initialized message buffer on the connection";
-}
-
-/* Is message in in-flight state */
-bool Broker::Net::MessageBuffer::isInFlight(){
-    return m_is_inflight;
-}
-
-/* Sets in-flight flag */
-void Broker::Net::MessageBuffer::setInFlight(bool is_in_flight){
-    m_is_inflight = is_in_flight;
 }
 
 /* Adds bytes to the buffer */
 void Broker::Net::MessageBuffer::addToBuffer(char* bytes, int bytes_length){
     LOG(DEBUG) << "Adding " << bytes_length << " bytes to the inbound message buffer";
-    
+
     m_buffer_vector.reserve(bytes_length);
     LOG(DEBUG) << "Reserving " << bytes_length << " bytes in the inbound message buffer";
-    
+
     m_buffer_vector.insert(m_buffer_vector.end(), bytes, bytes + bytes_length);
     LOG(DEBUG) << "Inserted " << bytes_length << " bytes into the inbound message buffer";
     LOG(DEBUG) << "Size of message buffer: " << m_buffer_vector.size() << " bytes";
@@ -88,6 +75,3 @@ void Broker::Net::MessageBuffer::setMessageSize(unsigned int size){
 char* Broker::Net::MessageBuffer::getCharArray(){
     return m_buffer_vector.data();
 }
-
-
-

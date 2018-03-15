@@ -22,7 +22,7 @@
  * THE SOFTWARE.
  */
 
-/* 
+/*
  * File:   MessageBuffer.h
  * Author: bbijelic
  *
@@ -36,56 +36,45 @@
 
 namespace Broker {
     namespace Net {
-        
+
         /* Message buffer class */
         class MessageBuffer {
         private:
-            
-            /* Is in flight */
-            bool m_is_inflight;
-            
+
             /* Message buffer vector */
             std::vector<char> m_buffer_vector;
-            
+
             /* Total message size */
             unsigned int m_total_message_size;
 
         public:
-            
+
             /* Constructor */
             MessageBuffer();
-            
+
             /* Destructor */
             ~MessageBuffer();
-            
-            /* Returns true when message is in-flight, 
-             * i.e. only half of message is received */
-            bool isInFlight();
-            
-            /* Sets the in-flight flag */
-            void setInFlight(bool);
-            
+
             /* Adds bytes to the buffer  */
             void addToBuffer(char* bytes, int bytes_length);
-            
+
             /* Returns buffer size */
             unsigned int getBufferSize();
-            
+
             /* Returns total message size in bytes */
             unsigned int getMessageSize();
-            
+
             /* Sets total message size */
             void setMessageSize(unsigned int size);
-            
+
             /* Returns char array */
             char* getCharArray();
-            
-            
-            
+
+
+
         };
 
     }
 }
 
 #endif /* MESSAGEBUFFER_H */
-
