@@ -55,3 +55,7 @@ Broker::Net::MessageBuffer& Broker::Net::Connection::getInboundMessageBuffer(){
 Broker::Net::MessageBuffer& Broker::Net::Connection::getOutboundMessageBuffer(){
     return m_outbound_message_buffer;
 }
+
+std::queue<void*>* Broker::Net::Connection::getMessageQueue(){
+    return &m_message_queue;
+}

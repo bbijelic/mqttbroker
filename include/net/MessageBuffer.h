@@ -69,9 +69,6 @@ namespace Broker {
 
             /* Returns char array */
             char* getCharArray();
-
-
-
         };
 
     }

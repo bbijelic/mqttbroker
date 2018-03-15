@@ -70,7 +70,7 @@ void Broker::Net::IO::IOThread::handleSocketError(
 
     if (errno == EAGAIN || errno == EWOULDBLOCK) {
 
-        /* Happens when there is no bytes in the kernels 
+        /* Happens when there is no bytes in the kernels
          * read buffer ready to be read */
 
         LOG(DEBUG) << "Nothing to read (EAGAIN)";
@@ -101,6 +101,14 @@ void Broker::Net::IO::IOThread::handleCompleteMessage(
 
     LOG(DEBUG) << "Handling complete message (" << message_buffer->getMessageSize()
             << " bytes) from the client " << connection->getPeerIp();
+
+    /* TODO Deserialize MQTT message bytes from the message buffer */
+    /* TODO Erase bytes from the buffer */
+
+    /* TODO Add deserialized message to the worker queue */
+    connection->getMessageQueue()->push(nullptr);
+
+    LOG(DEBUG) << "Message queue size: " << connection->getMessageQueue()->size();
 }
 
 void Broker::Net::IO::IOThread::handleInboundBytes(
@@ -167,7 +175,7 @@ void Broker::Net::IO::IOThread::handleInboundBytes(
             } catch (const Broker::Mqtt::RemainingLengthException& rmle) {
                 LOG(DEBUG) << "Remaining length exception: " << rmle.what();
 
-                /* Dont need special handling, just wait for 
+                /* Dont need special handling, just wait for
                  * the next bytes from the kernel buffer */
             }
 
@@ -177,7 +185,7 @@ void Broker::Net::IO::IOThread::handleInboundBytes(
                 <= inbound_message_buffer.getBufferSize()) {
 
             /* Whole message is in inbound message buffer */
-            /* It is possible that inbound message buffer contains 
+            /* It is possible that inbound message buffer contains
              * bytes from the next message also */
             handleCompleteMessage(connection, &inbound_message_buffer);
 
@@ -201,7 +209,7 @@ void Broker::Net::IO::IOThread::handleInboundBytes(
 
     if (receive_result == 0) {
 
-        /* When recv returns 0 it means end of file, 
+        /* When recv returns 0 it means end of file,
          * e.g. client closed the connection */
         /* Handle the closed connection */
         handleClientClosedConnection(connection);

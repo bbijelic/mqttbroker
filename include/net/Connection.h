@@ -5,6 +5,7 @@
 #include "MessageBuffer.h"
 
 #include <string>
+#include <queue>
 
 #define CLOSE_EBADF_MSG "Socket descriptor is not a valid descriptor"
 #define CLOSE_EINTR_MSG "Close operation has ben interrupted by a signal"
@@ -33,16 +34,20 @@ namespace Broker {
              * Is connection closed
              */
             bool m_is_closed = false;
-            
+
             /**
              * Inbound message buffer
              */
-            MessageBuffer m_inbound_message_buffer;  
-            
+            MessageBuffer m_inbound_message_buffer;
+
             /**
              * Outbound message buffer
              */
             MessageBuffer m_outbound_message_buffer;
+
+            /* Message queue containing deserialized messages */
+            /* which are ready to be handled by the worker thread */
+            std::queue<void*> m_message_queue;
 
         public:
 
@@ -75,12 +80,15 @@ namespace Broker {
              * Is connection closed
              */
             bool isClosed();
-            
+
             /* Returns reference to the inbound message buffer */
             MessageBuffer& getInboundMessageBuffer();
-            
+
             /* Returns reference to the outbound message buffer */
             MessageBuffer& getOutboundMessageBuffer();
+
+            /* Returns message queue reference */
+            std::queue<void*>* getMessageQueue();
 
         };
 
