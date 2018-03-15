@@ -73,6 +73,8 @@ void Broker::Net::TCP::TcpConnector::start() {
 
     address.sin_family = PF_INET;
     address.sin_port = htons(m_port);
+
+    /* TODO Bind only to configured interface */
     address.sin_addr.s_addr = INADDR_ANY;
 
     int optval = 1;
