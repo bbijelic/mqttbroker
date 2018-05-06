@@ -1,26 +1,16 @@
-/*
- * TcpListenerConfiguration.cpp
- *
- *  Created on: Dec 6, 2016
- *      Author: dev
- */
+#include "config/TcpListenerConfiguration.h"
 
-#include "TcpListenerConfiguration.hpp"
-#include <easylogging++.hpp>
 #include <string>
 
-using namespace std;
-using namespace Configuration;
+Broker::Config::TcpListenerConfiguration::~TcpListenerConfiguration(){
 
-TcpListenerConfiguration::~TcpListenerConfiguration(){
-	LOG(DEBUG) << "Destroying TCP Listener configuration instance";
 }
 
-int TcpListenerConfiguration::getPort(){
+int Broker::Config::TcpListenerConfiguration::getPort(){
 	return m_port;
 };
 
-string TcpListenerConfiguration::getBindAddress(){
+std::string Broker::Config::TcpListenerConfiguration::getBindAddress(){
 	return m_bind_address;
 };
 

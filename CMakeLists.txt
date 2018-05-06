@@ -5,26 +5,15 @@ project(mqttbroker)
 # Setting CMAKE variables
 # C++11 Standard
 set(CMAKE_CXX_STANDARD 11)
-# G++ glags
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DELPP_THREAD_SAFE -DELPP_STACKTRACE_ON_CRASH -DELPP_NO_DEFAULT_LOG_FILE")
 set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build)
 
 # Include dirs
-include_directories("include/concurrency")
-include_directories("include/config")
-include_directories("include/io")
-include_directories("include/logging")
-include_directories("include/mqtt")
-include_directories("include/mqtt/control")
-include_directories("include/mqtt/control/connect")
-include_directories("include/mqtt/control/connack")
-include_directories("include/networking")
-include_directories("include/networking/tcp")
-include_directories("include/networking/ssl")
-include_directories("include/notification")
+include_directories("include")
 
-# Copyng configuration to the build directory
-file(COPY "config" DESTINATION ${CMAKE_BINARY_DIR})
+# Copying configuration to the build directory
+file(COPY "config" DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
 # Source files
 file(GLOB_RECURSE SOURCES "src/*.cpp")

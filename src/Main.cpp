@@ -1,139 +1,130 @@
-#include <ConfigurationException.hpp>
-#include <Connection.hpp>
-#include <ConnectionHandler.hpp>
-#include <ConnectionQueue.hpp>
-#include <easylogging++.hpp>
-#include <IOThread.h>
-#include <ListenerManager.hpp>
-#include <sys/epoll.h>
-#include <ServerConfiguration.hpp>
-#include <cerrno>
-#include <csignal>
-#include <cstdlib>
+/*
+ * The MIT License
+ *
+ * Copyright 2018 bbijelic.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+/* 
+ * File:   Main.cpp
+ * Author: bbijelic
+ *
+ * Created on January 30, 2018, 5:58 PM
+ */
+
+#include "sys/ShutdownHandler.h"
+#include "net/io/IOThread.h"
+#include "net/tcp/TcpConnector.h"
+#include "net/ConnectionAcceptorThread.h"
+#include "net/ConnectorException.h"
+#include "config/ServerConfiguration.h"
+#include "config/ConfigurationException.h"
+#include "logging/easylogging++.h"
+#include "events/Epoll.h"
+
 #include <string>
+#include <memory>
 
 INITIALIZE_EASYLOGGINGPP
 
-using namespace std;
-using namespace IO;
-using namespace Networking;
-using namespace Networking::TCP;
-using namespace Networking::Security;
-using namespace Configuration;
-
-static int initialize_epoll() {
-	int epoll_fd = epoll_create1(0);
-	if (epoll_fd == -1) {
-		LOG(ERROR)<< "epoll_create() failed: " << errno;
-		abort();
-	}
-
-	LOG(INFO)<< "epoll initialized";
-
-	return epoll_fd;
-}
-
-void shutdownHandler(int signum) {
-	LOG(INFO)<< "Interrupt signal (" << signum << ") received.";
-	LOG(INFO) << "Handling server shutdown...";
-	exit(signum);
-}
-
-static void registerShutdownHandler() {
-	LOG(INFO)<< "Registering shutdown handler";
-
-	// Register signal SIGINT and signal handler
-	// Abnormal termination of the program, such as a call to abort
-	signal(SIGABRT, shutdownHandler);
-	// An erroneous arithmetic operation, such as a divide by zero or an operation resulting in overflow.
-	signal(SIGFPE, shutdownHandler);
-	// Detection of an illegal instruction
-	signal(SIGILL, shutdownHandler);
-	// Receipt of an interactive attention signal.
-	signal(SIGINT, shutdownHandler);
-	// An invalid access to storage.
-	signal(SIGSEGV, shutdownHandler);
-	// A termination request sent to the program.
-	signal(SIGTERM, shutdownHandler);
-}
-
-static ServerConfiguration* loadConfiguration(string config_filepath) {
-
-	// Initialize configuration
-	ServerConfiguration* server_config = NULL;
-
-	try {
-
-		// Initialize and parse server configuration
-		server_config = new ServerConfiguration();
-		server_config->parseConfiguration(config_filepath);
-
-	} catch (ConfigurationException &ce) {
-		LOG(ERROR)<< "Configuration error: " << ce.getMessage();
-		abort();
-	}
-
-	return server_config;
-
-}
+#define CONFIG_FILEPATH "config/broker.cfg"
+#define LOGGER_CONFIG_FILEPATH "config/logger.cfg";
 
 /**
  * Main
  */
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
 
-	// Load configuration from file
-	el::Configurations conf("config/logger.conf");
-	el::Loggers::reconfigureAllLoggers(conf);
+    /* Initialize shutdown handler */
+    std::unique_ptr<Broker::SYS::ShutdownHandler> shutdown_handler_ptr(
+            new Broker::SYS::ShutdownHandler());
 
-	// Registering shutdown handler
-	registerShutdownHandler();
+    try {
 
-	// Load configuration
-	ServerConfiguration* server_config = loadConfiguration("config/broker.cfg");
+        std::string config_filepath = CONFIG_FILEPATH;
+        std::string logger_config_filepath = LOGGER_CONFIG_FILEPATH;
 
-	LOG(INFO)<< "Starting broker node " << server_config->getNodeName();
+        // Load configuration from file
+        el::Configurations conf(logger_config_filepath.c_str());
+        el::Loggers::reconfigureAllLoggers(conf);
+        el::Helpers::setThreadName("main");
 
-	// initialize epoll
-	int epoll_fd = initialize_epoll();
+        /* Initialize shared pointer to configuration */
+        std::unique_ptr<Broker::Config::ServerConfiguration> server_config_ptr(
+                new Broker::Config::ServerConfiguration());
 
-	// Initialize IO thread
-	IOThread* io_thread = new IOThread(epoll_fd);
-	// Start IO thread
-	io_thread->start();
+        /* Initialize and parse server configuration */
+        server_config_ptr->parseConfiguration(config_filepath);
 
-	// Connection queue
-	ConnectionQueue<Connection*> connection_queue;
+        LOG(INFO) << "Starting broker node " << server_config_ptr->getNodeName();
 
-	// Connection handler
-	ConnectionHandler* connection_handler = new ConnectionHandler(
-			connection_queue, epoll_fd);
-	// Start handler
-	connection_handler->start();
+        // Initialize epoll shared pointer for socket and for connection events
+        std::shared_ptr<Broker::Events::Epoll> socket_epoll_ptr(
+                new Broker::Events::Epoll("socket-epoll"));
 
-	// Initialize listener manager
-	ListenerManager* listener_mngr = new ListenerManager(connection_queue, server_config);
-	// Start listeners
-	listener_mngr->startListeners();
+        // Initialize epoll shared pointer for incomming connection events
+        std::shared_ptr<Broker::Events::Epoll> conn_epoll_ptr(
+                new Broker::Events::Epoll("connection-epoll"));
 
-	// Join the connection handler
-	connection_handler->join();
-	// Join the IO Thread
-	io_thread->join();
+        /* IO thread smart pointer init */
+        std::unique_ptr<Broker::Net::IO::IOThread> io_thread_ptr_1(
+                new Broker::Net::IO::IOThread(conn_epoll_ptr));
 
-	// Delete server configuration
-	delete server_config;
+        /* Start IO thread */
+        io_thread_ptr_1->start();
 
-	// Delete listener manager
-	delete listener_mngr;
+        // Initialize TCP connector unique pointer
+        std::unique_ptr<Broker::Net::TCP::TcpConnector> tcp_connector_ptr(
+                new Broker::Net::TCP::TcpConnector(
+                1883, std::string("0.0.0.0"), socket_epoll_ptr));
 
-	// Delete tcp connection handler
-	delete connection_handler;
+        // Start connector
+        // Creates socket, binds on interface and starts to listen
+        tcp_connector_ptr->start();
 
-	// Delete IO threads
-	delete io_thread;
+        // Initialize connection acceptor thread unique pointer
+        std::unique_ptr<Broker::Net::ConnectionAcceptorThread> conn_acceptor_ptr_1(
+                new Broker::Net::ConnectionAcceptorThread(
+                socket_epoll_ptr, conn_epoll_ptr));
 
-	return 0;
+        // Start the thread
+        conn_acceptor_ptr_1->start();
 
+        /* Join IO threads */
+        io_thread_ptr_1->join();
+
+        // Join the acceptor threads
+        conn_acceptor_ptr_1->join();
+
+        // Stop the TCP connector
+        tcp_connector_ptr->stop();
+
+    } catch (const Broker::Net::ConnectorException &conne) {
+        LOG(ERROR) << "TCP connector exception: " << conne.what();
+        abort();
+
+    } catch (const Broker::Config::ConfigurationException& ce) {
+        LOG(ERROR) << "Configuration exception: " << ce.what();
+        abort();
+    }
+
+    return 0;
 }
 

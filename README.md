@@ -6,20 +6,32 @@ To clone this repository execute following command:
 git clone https://github.com/bbijelic/mqttbroker.git
 ```
 
+## Dependencies
+
+At the moment project has some dependencies which have to be resolved before building the project.
+
+* libconfig
+* libssl
+
+Install dependencies
+```
+$ sudo apt-get install libconfig++-dev libssl-dev
+```
+`TODO` Integrated dependecy resolving into CMake
+
 ## Build project
-Navigate to project directory
-```
-cd mqttbroker
-```
 
-To build project execute following command:
+To build project execute following commands:
 
 ```
-$ mkdir -p build && cd build && cmake .. && make
+$ cmake .
+$ make
 ```
+
+Build output will be placed into `build` directory.
+
 ## Start MQTT broker
 
 ```
 ./mqttbroker
 ```
-

@@ -1,42 +1,32 @@
-/*
- * SslListenerConfiguration.cpp
- *
- *  Created on: Dec 6, 2016
- *      Author: dev
- */
+#include "config/SslListenerConfiguration.h"
 
 #include <string>
-#include "SslListenerConfiguration.hpp"
-#include "easylogging++.hpp"
 
-using namespace std;
-using namespace Configuration;
-
-SslListenerConfiguration::~SslListenerConfiguration(){
-	LOG(DEBUG) << "Destroying SSL Listener configuration instance";
+Broker::Config::SslListenerConfiguration::~SslListenerConfiguration(){
+	
 }
 
-int SslListenerConfiguration::getPort(){
+int Broker::Config::SslListenerConfiguration::getPort(){
 	return m_port;
 }
 
-string SslListenerConfiguration::getBindAddress(){
+std::string Broker::Config::SslListenerConfiguration::getBindAddress(){
 	return m_bind_address;
 }
 
-string SslListenerConfiguration::getCaCertFile(){
+std::string Broker::Config::SslListenerConfiguration::getCaCertFile(){
 	return m_ca_certfile;
 }
 
-string SslListenerConfiguration::getServerCertFile(){
+std::string Broker::Config::SslListenerConfiguration::getServerCertFile(){
 	return m_server_certfile;
 }
 
-string SslListenerConfiguration::getServerKeyFile(){
+std::string Broker::Config::SslListenerConfiguration::getServerKeyFile(){
 	return m_server_keyfile;
 }
 
-bool SslListenerConfiguration::getVerifyPeer(){
+bool Broker::Config::SslListenerConfiguration::getVerifyPeer(){
 	return m_verify_peer;
 }
 
